@@ -51,6 +51,7 @@ function Get-Credential {
    #     v 1.2 Refactor ShellIds key out to a variable, and wrap lines a bit
    #     v 1.1 Add -Console switch and set registry values accordingly (ouch)
    #     v 1.0 Add Title, Description, Domain, and UserName options to the Get-Credential cmdlet
+   [OutputType("System.Management.Automation.PSCredential")]
    [CmdletBinding(DefaultParameterSetName="Prompted")]
    param(
       #   A default user name for the credential prompt, or a pre-existing credential (would skip all prompting)
@@ -105,7 +106,7 @@ function Get-Credential {
    process {
       Write-Verbose ($PSBoundParameters | Out-String)
       [Management.Automation.PSCredential]$Credential = $null
-      if( $UserName -is [System.Management.Automation.PSCredential]) {
+      if( $UserName -is [Management.Automation.PSCredential]) {
          $Credential = $UserName
       } elseif($UserName -ne $null) {
          $UserName = $UserName.ToString()
@@ -126,15 +127,15 @@ function Get-Credential {
 
       Write-Verbose "UserName: $(if($Credential){$Credential.UserName}else{$UserName})"
       if($Password) {
-         if($Password -isnot [System.Security.SecureString]) {
+         if($Password -isnot [Security.SecureString]) {
             $Password = Encode-SecureString $Password
          }
          Write-Verbose "Creating credential from inline Password"
 
          if($Domain) {
-            $Cred = New-Object System.Management.Automation.PSCredential ${Domain}\${UserName}, ${Password}
+            $Cred = New-Object Management.Automation.PSCredential ${Domain}\${UserName}, ${Password}
          } else {
-            $Cred = New-Object System.Management.Automation.PSCredential ${UserName}, ${Password}
+            $Cred = New-Object Management.Automation.PSCredential ${UserName}, ${Password}
          }
          if($Credential) {
             $Credential | Get-Member -type NoteProperty | % {
@@ -162,7 +163,7 @@ function Get-Credential {
                }
             }
             Write-Verbose "Generating Credential with Read-Host -AsSecureString"
-            $Credential = New-Object System.Management.Automation.PSCredential $UserName,$(Read-Host "Password for user $UserName" -AsSecureString)
+            $Credential = New-Object Management.Automation.PSCredential $UserName,$(Read-Host "Password for user $UserName" -AsSecureString)
          } else {
             if($GenericCredentials) { $Type = "Generic" } else { $Type = "Domain" }
          
@@ -202,9 +203,9 @@ function Decode-SecureString {
    )
    end {
       if($secure -eq $null) { return "" }
-      $BSTR = [System.Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
-      Write-Output [System.Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
-      [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+      $BSTR = [Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
+      Write-Output [Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
+      [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
    }
 }
 
@@ -220,7 +221,7 @@ function Encode-SecureString {
    )
    end {
       [char[]]$Chars = $String.ToString().ToCharArray()
-      $SecureString = New-Object System.Security.SecureString
+      $SecureString = New-Object Security.SecureString
       foreach($c in $chars) { $SecureString.AppendChar($c) }
       $SecureString.MakeReadOnly();
       Write-Output $SecureString
