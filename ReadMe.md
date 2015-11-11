@@ -20,9 +20,14 @@ Despite the fact that this feature arrived late in the life of BetterCredentials
 
 On out BetterCredentials\Get-Credential command, the `-Store` switch causes the returned credentials to be stored in the vault, and the `-Delete` switch makes sure they are not.
 
-Once you've stored credentials in the vault, future requests for the same credential (based on the domain and username) will simply return the credentials without prompting!
+Once you've stored credentials in the vault, future requests for the same credential -- where you pass in a username (and optionally, a domain) will simply return the credentials without prompting. Because of this, there is also a `-Force` switch (alias: `-New`) which prevents loading and forces the prompt to be displayed. When you need to change a stored password, use both together:
 
+    BetterCredentials\Get-Credential -Force -Store
 
 ##### NOTES
 
+In my scripts and sample code, I nearly always use `BetterCredentials\Get-Credential` as a way to make sure that I'm invoking this overload of Get-Credential, but the idea is that you can simply import the BetterCredentials module in your profile and automatically get this overload whenever you're calling Get-Credential. Of course, I haven't (yet) overloaded the [Credential] transform attribute, so the automatic prompting when you pass a user name to a `-Credential` attribute doesn't use my module -- you have to explicitly call `Get-Credential`.
+
 I feel like I should apoligize for the clumsyness of `Get-Credential YourName -Delete`, and maybe some day I'll write a full set of `Get`, `Set`, `Remove` commands, but for now, there's only one command in this module, so that's how it is.
+
+Licensed under MIT license, see [License](LICENSE).

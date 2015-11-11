@@ -1,3 +1,6 @@
+## Copyright (c) 2014, Joel Bennett
+## Licensed under MIT license
+
 $ScriptRoot = Get-Variable PSScriptRoot -ErrorAction SilentlyContinue | ForEach-Object { $_.Value }
 if(!$ScriptRoot) {
   $ScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -35,6 +38,9 @@ function Get-Credential {
    #    Will prompt for credentials inline in the host instead of in a popup dialog
    #  .Notes
    #    History:
+   #     v 4.3 Update module metadata and copyrights, etc.
+   #     v 4.2 Provide -Force switch to force prompting instead of loading
+   #     v 4.1 Modularize and Release
    #     v 4.0 Change -Store to save credentials in the Windows Credential Manager (Vault)
    #     v 3.0 Modularize so I can "Requires" it
    #     v 2.9 Reformat to my new coding style...
@@ -99,6 +105,11 @@ function Get-Credential {
       [Parameter(ParameterSetName="Delete",Mandatory=$true)]
       [switch]$Delete,
 
+      # Ignore stored credentials and re-prompt
+      # Note: when combined with -Store this overwrites stored credentials
+      [Alias("New")]
+      [switch]$Force,
+
       #  The password
       [Parameter(ParameterSetName="Promptless",Mandatory=$true)]
       $Password
@@ -106,9 +117,9 @@ function Get-Credential {
    process {
       Write-Verbose ($PSBoundParameters | Out-String)
       [Management.Automation.PSCredential]$Credential = $null
-      if( $UserName -is [Management.Automation.PSCredential]) {
+      if( $UserName -is [System.Management.Automation.PSCredential]) {
          $Credential = $UserName
-      } elseif($UserName -ne $null) {
+      } elseif(!$Force -and $UserName -ne $null) {
          $UserName = $UserName.ToString()
          if($Domain) {
             if($Delete) {
@@ -127,15 +138,15 @@ function Get-Credential {
 
       Write-Verbose "UserName: $(if($Credential){$Credential.UserName}else{$UserName})"
       if($Password) {
-         if($Password -isnot [Security.SecureString]) {
+         if($Password -isnot [System.Security.SecureString]) {
             $Password = Encode-SecureString $Password
          }
          Write-Verbose "Creating credential from inline Password"
 
          if($Domain) {
-            $Cred = New-Object Management.Automation.PSCredential ${Domain}\${UserName}, ${Password}
+            $Cred = New-Object System.Management.Automation.PSCredential ${Domain}\${UserName}, ${Password}
          } else {
-            $Cred = New-Object Management.Automation.PSCredential ${UserName}, ${Password}
+            $Cred = New-Object System.Management.Automation.PSCredential ${UserName}, ${Password}
          }
          if($Credential) {
             $Credential | Get-Member -type NoteProperty | % {
@@ -163,7 +174,7 @@ function Get-Credential {
                }
             }
             Write-Verbose "Generating Credential with Read-Host -AsSecureString"
-            $Credential = New-Object Management.Automation.PSCredential $UserName,$(Read-Host "Password for user $UserName" -AsSecureString)
+            $Credential = New-Object System.Management.Automation.PSCredential $UserName,$(Read-Host "Password for user $UserName" -AsSecureString)
          } else {
             if($GenericCredentials) { $Type = "Generic" } else { $Type = "Domain" }
          
@@ -175,8 +186,6 @@ function Get-Credential {
          }
       }
       
-
-
       if($Store) {
          if($Description) {
             Add-Member -InputObject $Credential -MemberType NoteProperty -Name Description -Value $Description
@@ -186,6 +195,19 @@ function Get-Credential {
             Write-Error $result
          }
       }
+
+      # Make sure it's Generic
+      if($GenericCredentials -and $Credential.UserName.Contains("\")) {
+         ${UserName} = @($Credential.UserName -Split "\\")[-1]
+         $Cred = New-Object System.Management.Automation.PSCredential ${UserName}, $Credential.Password
+         if($Credential) {
+            $Credential | Get-Member -type NoteProperty | % {
+               Add-Member -InputObject $Cred -MemberType NoteProperty -Name $_.Name -Value $Credential.($_.Name) 
+            }
+         }
+         $Credential = $Cred         
+      }
+
       return $Credential
    }
 }
@@ -203,9 +225,9 @@ function Decode-SecureString {
    )
    end {
       if($secure -eq $null) { return "" }
-      $BSTR = [Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
-      Write-Output [Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
-      [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+      $BSTR = [System.Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
+      Write-Output [System.Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
+      [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
    }
 }
 
@@ -221,7 +243,7 @@ function Encode-SecureString {
    )
    end {
       [char[]]$Chars = $String.ToString().ToCharArray()
-      $SecureString = New-Object Security.SecureString
+      $SecureString = New-Object System.Security.SecureString
       foreach($c in $chars) { $SecureString.AppendChar($c) }
       $SecureString.MakeReadOnly();
       Write-Output $SecureString
@@ -229,3 +251,4 @@ function Encode-SecureString {
 }
 New-Alias gcred Get-Credential
 Export-ModuleMember -Function Get-Credential -Alias gcred
+

@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Copyright (c) 2014, Joel Bennett
+// Licensed under MIT license
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
