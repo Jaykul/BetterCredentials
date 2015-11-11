@@ -3,6 +3,18 @@ The Better Credentials Module
 
 The goal of BetterCredentials is to provide a completely backwards-compatible Get-Credential command that enhances the in-the-box Get-Credential by adding additional features which are missing from the built-in command. Specifically, storing credentials for automation, and providing more complete prompts with an explanation of what the credentials are for.
 
+TO INSTALL:
+===========
+
+Use the PowerShellGet module included in WMF (PowerShell) 5, or the [PackageManagement Preview](http://www.microsoft.com/en-us/download/details.aspx?id=49186) for PowerShell 3 and 4.
+
+Just run:
+
+    Install-Module BetterCredentials
+
+Features
+========
+
 Prompting
 ---------
 
