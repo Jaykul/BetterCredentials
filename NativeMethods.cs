@@ -87,6 +87,14 @@ namespace CredentialManagement
            return cred;
        }
 
+       public static bool Test(string filter)
+       {
+           uint count;
+           IntPtr pCredentials;
+           bool foundCredential = NativeMethods.CredEnumerate(FixTarget(filter), 0, out count, out pCredentials);
+           return foundCredential;
+       }
+
        private static string FixTarget(string target)
        {
            if (!target.Contains(":"))

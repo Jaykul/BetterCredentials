@@ -36,6 +36,13 @@ Once you've stored credentials in the vault, future requests for the same creden
 
     BetterCredentials\Get-Credential -Force -Store
 
+
+Unattended Usage
+----------------
+
+When Get-Credential is called from a script running unattended, e.g. in a scheduled task, script execution will hang prompting for credentials if there is no credential in the vault corresponding to the given username. Normally one might execute `Get-Credential username -Store` to populate the credential vault prior to putting the scheduled task into production, but might also forget to do so. `Test-Credential username` solves the script hanging problem by returning a true or false value depending on whether a credential corresponding to `username` is currently stored in the vault. False values can be used to invoke error handling as needed.
+
+
 ##### NOTES
 
 In my scripts and sample code, I nearly always use `BetterCredentials\Get-Credential` as a way to make sure that I'm invoking this overload of Get-Credential, but the idea is that you can simply import the BetterCredentials module in your profile and automatically get this overload whenever you're calling Get-Credential. Of course, I haven't (yet) overloaded the [Credential] transform attribute, so the automatic prompting when you pass a user name to a `-Credential` attribute doesn't use my module -- you have to explicitly call `Get-Credential`.
