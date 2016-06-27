@@ -285,4 +285,4 @@ function Encode-SecureString {
 }
 New-Alias gcred Get-Credential
 Export-ModuleMember -Function Get-Credential -Alias gcred
-
+Export-ModuleMember -Function Test-Credential
