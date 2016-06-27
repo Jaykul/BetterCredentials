@@ -212,6 +212,40 @@ function Get-Credential {
    }
 }
 
+function Test-Credential { 
+   # .Synopsis
+   #    Tests whether or not a credential with the given username exists in the credential vault.
+   # .Description
+   #    The Test-Credential function returns a true value if a credential with the given username exists in your credential vault. If it does exist, you can use the Get-Credential function with the assurance that it will not prompt for credentials.
+   # 
+   #    Calling Test-Credential prior to Get-Credential prevents prompting the user for the credentials when the credential does not already exist in the credential store. This is useful for trapping errors in scripts that need to run unattended, and prevents Get-Credential from causing the execution of such scripts to hang.
+   # .Example
+   #    Test-Credential UserName
+   # 
+   #    If you haven't stored the password for "UserName", Test-Credential returns a false value but does not prompt for the password. Otherwise it returns a true value.
+   # .Example
+   #    Test-Credential UserName*
+   # 
+   #    A trailing asterisk is a wildcard character that matches zero or more characters at the end of the given user name.
+   #  .Notes
+   #    History:
+   #     v 4.4 Test-Credential added to BetterCredentials
+   [OutputType("System.Boolean")]
+   param(
+      [Parameter(Position=1,Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
+      [Alias("Credential")]
+      [PSObject]$UserName
+   )
+   process {
+      if( $UserName -is [System.Management.Automation.PSCredential]) {
+         $target = $UserName.UserName
+      } else {
+         $target = $UserName.ToString()
+      }
+   return [CredentialManagement.Store]::Test($target)
+   }
+}
+
 function Decode-SecureString {
    #.Synopsis
    #  Decodes a SecureString to a String
