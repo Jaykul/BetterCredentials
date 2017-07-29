@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2014, Joel Bennett
+// Copyright (c) 2014, Joel Bennett
 // Licensed under MIT license
 using System;
 using System.Runtime.InteropServices;
@@ -17,7 +17,11 @@ namespace CredentialManagement
        Generic = 1,
        DomainPassword = 2,
        DomainCertificate = 3,
-       DomainVisiblePassword = 4
+       DomainVisiblePassword = 4,
+       GenericCertificate = 5,
+       DomainExtended = 6,
+       Maximum = 7,
+       MaximumEx = 1007
    }
 
    public enum PersistanceType : uint
@@ -43,10 +47,10 @@ namespace CredentialManagement
            result.MakeReadOnly();
            return result;
        }
-       
+
        public static SecureString CreateSecureString(IntPtr ptrToString, int length = 0)
        {
-           string password = length > 0 
+           string password = length > 0
                ? Marshal.PtrToStringUni(ptrToString, length)
                : Marshal.PtrToStringUni(ptrToString);
            return CreateSecureString(password);
@@ -76,13 +80,36 @@ namespace CredentialManagement
        }
    }
 
+   public static class IntPtrHelpers
+    {
+        public static IntPtr Increment(this IntPtr ptr, int cbSize)
+        {
+            return new IntPtr(ptr.ToInt64() + cbSize);
+        }
+
+        public static IntPtr Increment<T>(this IntPtr ptr)
+        {
+            return ptr.Increment(Marshal.SizeOf(typeof(T)));
+        }
+
+        public static T ElementAt<T>(this IntPtr ptr, int index)
+        {
+            var offset = Marshal.SizeOf(typeof(T))*index;
+            var offsetPtr = ptr.Increment(offset);
+            return (T)Marshal.PtrToStructure(offsetPtr, typeof(T));
+        }
+    }
+
    public static class Store
    {
 
-       public static PSObject Load(string target, CredentialType type = CredentialType.Generic)
+       public static PSObject Load(string target, CredentialType type = CredentialType.Generic, bool fix = true)
        {
            PSObject cred;
-           NativeMethods.CredRead(FixTarget(target), type, 0, out cred);
+           if(fix) {
+               target = FixTarget(target);
+           }
+           NativeMethods.CredRead(target, type, 0, out cred);
 
            return cred;
        }
@@ -97,18 +124,45 @@ namespace CredentialManagement
 
        private static string FixTarget(string target)
        {
-           if (!target.Contains(":"))
+           if (!target.Contains("/"))
            {
                if (target.Contains("="))
                {
-                   target = "MicrosoftPowerShell:" + target;
+                   target = "MicrosoftPowerShell/" + target;
                }
                else
                {
-                   target = "MicrosoftPowerShell:user=" + target;
+                   target = "MicrosoftPowerShell/user=" + target;
                }
            }
            return target;
+       }
+
+       public static PSObject[] Find(string filter = "")
+       {
+           uint count = 0;
+           int Flag = 0;
+           IntPtr credentialArray = IntPtr.Zero;
+           PSObject[] output = null;
+
+           if(string.IsNullOrEmpty(filter)) {
+               filter = null;
+               Flag = 1;
+           }
+
+           NativeMethods.PSCredentialMarshaler helper = new NativeMethods.PSCredentialMarshaler();
+
+           if(NativeMethods.CredEnumerate(filter, Flag, out count, out credentialArray)) {
+                IntPtr cred = IntPtr.Zero;
+                output = new PSObject[count];
+                for (int n = 0; n < count; n++)
+                {
+                    cred = credentialArray.ElementAt<IntPtr>(n);
+                    output[n] = (PSObject)helper.MarshalNativeToManaged(cred);
+                }
+                helper.CleanUpNativeData(credentialArray);
+           }
+           return output;
        }
 
        public static NativeMethods.CREDErrorCodes Save(PSObject credential)
@@ -135,6 +189,8 @@ namespace CredentialManagement
            else return NativeMethods.CREDErrorCodes.NO_ERROR;
        }
    }
+
+
    public class NativeMethods
    {
        public enum CREDErrorCodes
@@ -152,12 +208,12 @@ namespace CredentialManagement
        }
 
        [DllImport("Advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
-       public static extern bool CredRead(string target, CredentialType type, int reservedFlag, 
+       public static extern bool CredRead(string target, CredentialType type, int reservedFlag,
            [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(PSCredentialMarshaler))]
            out PSObject credentialout);
 
        [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-       public static extern bool CredWrite([In] 
+       public static extern bool CredWrite([In]
            [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(PSCredentialMarshaler))]
            PSObject userCredential, [In] UInt32 flags);
 
@@ -297,7 +353,7 @@ namespace CredentialManagement
                credEx.Members.Add(new PSNoteProperty("Persistence", (PersistanceType)ncred.Persist));
                credEx.Members.Add(new PSNoteProperty("Description", ncred.Comment));
                credEx.Members.Add(new PSNoteProperty("LastWriteTime", DateTime.FromFileTime((((long)ncred.LastWritten.dwHighDateTime) << 32) + ncred.LastWritten.dwLowDateTime)));
-               
+
                return credEx;
            }
 
@@ -306,6 +362,6 @@ namespace CredentialManagement
                return new PSCredentialMarshaler();
            }
        }
-       
+
    }
 }
