@@ -58,7 +58,7 @@ Description = 'A (compatible) major upgrade for Get-Credential, including suppor
 # NestedModules = @()
 
 # Functions to export from this module
-FunctionsToExport = 'Get-Credential','Test-Credential'
+FunctionsToExport = 'Get-Credential','Find-Credential','Set-Credential', 'Remove-Credential','Test-Credential'
 
 # Cmdlets to export from this module
 CmdletsToExport = @()
@@ -67,8 +67,7 @@ CmdletsToExport = @()
 VariablesToExport = @()
 
 # Aliases to export from this module
-# AliasesToExport = @()
-AliasesToExport = 'gcred'
+AliasesToExport = @('gcred')
 
 # DSC resources to export from this module
 # DscResourcesToExport = @()
@@ -77,7 +76,7 @@ AliasesToExport = 'gcred'
 # ModuleList = @()
 
 # List of all files packaged with this module
-FileList = @('NativeMethods.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.text', 'LICENSE')
+FileList = @('CredentialManagement.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.text', 'LICENSE')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
