@@ -4,7 +4,7 @@
 RootModule = 'BetterCredentials.psm1'
 
 # Version number of this module.
-ModuleVersion = '4.4'
+ModuleVersion = '4.5'
 
 # ID used to uniquely identify this module
 GUID = 'd63b6487-26db-49ca-b282-e69a256c23cc'
