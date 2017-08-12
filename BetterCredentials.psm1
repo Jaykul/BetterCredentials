@@ -8,6 +8,51 @@ if (!$ScriptRoot) {
 
 Add-Type -Path $ScriptRoot\CredentialManagement.cs
 
+## Private Functions
+function DecodeSecureString {
+    #.Synopsis
+    #  Decodes a SecureString to a String
+    [CmdletBinding()]
+    [OutputType("System.String")]
+    param(
+        # The SecureString to decode
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias("Password")]
+        [SecureString]$secure
+    )
+    end {
+        if ($secure -eq $null) {
+            return ""
+        }
+        $BSTR = [System.Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
+        Write-Output [System.Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+    }
+}
+
+function EncodeSecureString {
+    #.Synopsis
+    #  Encodes a string as a SecureString (for this computer/user)
+    [CmdletBinding()]
+    [OutputType("System.Security.SecureString")]
+    param(
+        # The string to encode into a secure string
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [String]$String
+    )
+    end {
+        [char[]]$Chars = $String.ToString().ToCharArray()
+        $SecureString = New-Object System.Security.SecureString
+        foreach ($c in $chars) {
+            $SecureString.AppendChar($c)
+        }
+        $SecureString.MakeReadOnly();
+        Write-Output $SecureString
+    }
+}
+
+## Public Functions
+
 function Find-Credential {
     <#
         .SYNOPSIS
@@ -29,7 +74,7 @@ function Find-Credential {
             Find-Credential | Where UserName -match User@Example.org
 
             Filters credentials to find everything for a specific username
-        #>
+    #>
     [CmdletBinding()]
     param(
         # A filter for the Target name. May contain an asterisk wildcard at the start OR at the end.
@@ -95,7 +140,8 @@ function Set-Credential {
             https://msdn.microsoft.com/en-us/library/windows/desktop/aa374788
      #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "Password", Justification = "Let other people worry about that, this is a useful option")]
-    [CmdletBinding( )]
+    [Alias('scred')]
+    [CmdletBinding()]
     param(
         # A credential to store
         [PSCredential]$Credential,
@@ -141,19 +187,18 @@ function Set-Credential {
         $Credential | Add-Member NoteProperty Persistence $Persistence
     }
 
-    if (($result = [CredentialManagement.Store]::Save($Credential)) -ne "NO_ERROR") {
-        Write-Error $result
-    }
+    [CredentialManagement.Store]::Save($Credential)
 }
 
 function Remove-Credential {
     <#
-    .SYNOPSIS
-    Remove a credential from the Windows Credential Manager (Vault)
+        .SYNOPSIS
+            Remove a credential from the Windows Credential Manager (Vault)
 
-    .DESCRIPTION
-    Removes the credential for the specified target
+        .DESCRIPTION
+            Removes the credential for the specified target
     #>
+    [Alias('rcred')]
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipelineByPropertyName, ValueFromPipeline, Mandatory)]
@@ -200,13 +245,15 @@ function Get-Credential {
           Will prompt for credentials inline in the host instead of in a popup dialog
         .Notes
           History:
+           v 4.5 Add Find-Credential, Set-Credential, Remove-Credential
+           v 4.4 Add a Test-Credential
            v 4.3 Update module metadata and copyrights, etc.
            v 4.2 Provide -Force switch to force prompting instead of loading
            v 4.1 Modularize and Release
            v 4.0 Change -Store to save credentials in the Windows Credential Manager (Vault)
            v 3.0 Modularize so I can "Requires" it
            v 2.9 Reformat to my new coding style...
-           v 2.8 Refactor Encode-SecureString (and add unused Decode-SecureString for completeness)
+           v 2.8 Refactor EncodeSecureString (and add unused DecodeSecureString for completeness)
                  NOTE these are not at all like the built-in ConvertFrom/ConvertTo-SecureString
            v 2.7 Fix double prompting issue when using -Inline
                  Use full typename for PSCredential to maintain V2 support - Thanks Joe Hayes
@@ -220,6 +267,7 @@ function Get-Credential {
            v 1.1 Add -Console switch and set registry values accordingly (ouch)
            v 1.0 Add Title, Description, Domain, and UserName options to the Get-Credential cmdlet
     #>
+    [Alias('gcred')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "Password", Justification = "Let other people worry about that, this is a useful option")]
     [OutputType("System.Management.Automation.PSCredential")]
     [CmdletBinding(DefaultParameterSetName = "Prompted")]
@@ -303,7 +351,7 @@ function Get-Credential {
         Write-Verbose "UserName: $(if($Credential){$Credential.UserName}else{$UserName})"
         if ($Password) {
             if ($Password -isnot [System.Security.SecureString]) {
-                $Password = Encode-SecureString $Password
+                $Password = EncodeSecureString $Password
             }
             Write-Verbose "Creating credential from inline Password"
 
@@ -366,10 +414,7 @@ function Get-Credential {
             if ($Description) {
                 Add-Member -InputObject $Credential -MemberType NoteProperty -Name Description -Value $Description
             }
-            $result = [CredentialManagement.Store]::Save($Credential)
-            if ($result -ne "NO_ERROR") {
-                Write-Error $result
-            }
+            [CredentialManagement.Store]::Save($Credential)
         }
 
         # Make sure it's Generic
@@ -388,47 +433,5 @@ function Get-Credential {
     }
 }
 
-function Decode-SecureString {
-    #.Synopsis
-    #  Decodes a SecureString to a String
-    [CmdletBinding()]
-    [OutputType("System.String")]
-    param(
-        # The SecureString to decode
-        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [Alias("Password")]
-        [SecureString]$secure
-    )
-    end {
-        if ($secure -eq $null) {
-            return ""
-        }
-        $BSTR = [System.Runtime.InteropServices.marshal]::SecureStringToBSTR($secure)
-        Write-Output [System.Runtime.InteropServices.marshal]::PtrToStringAuto($BSTR)
-        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-    }
-}
-
-function Encode-SecureString {
-    #.Synopsis
-    #  Encodes a string as a SecureString (for this computer/user)
-    [CmdletBinding()]
-    [OutputType("System.Security.SecureString")]
-    param(
-        # The string to encode into a secure string
-        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [String]$String
-    )
-    end {
-        [char[]]$Chars = $String.ToString().ToCharArray()
-        $SecureString = New-Object System.Security.SecureString
-        foreach ($c in $chars) {
-            $SecureString.AppendChar($c)
-        }
-        $SecureString.MakeReadOnly();
-        Write-Output $SecureString
-    }
-}
-New-Alias gcred Get-Credential
-Export-ModuleMember -Function *-Credential -Alias gcred
+Export-ModuleMember -Function *-Credential -Alias gcred, scred, rcred
 
