@@ -10,7 +10,11 @@ Use the PowerShellGet module included in WMF (PowerShell) 5, or the [PackageMana
 
 Just run:
 
-    Install-Module BetterCredentials
+```posh
+    Install-Module BetterCredentials -AllowClobber
+```
+
+The `-AllowClobber` switch is to allow the BetterCredentials module to do what it's designed to do: provide you a better, backwards compatible `Get-Credential` command, clobbering the built-in version.
 
 Features
 ========
@@ -18,7 +22,7 @@ Features
 Prompting
 ---------
 
-The original motivation for writing BetterCredentials was to take advantage of some of the features of PowerShell's underlying credential API which are inexplicably ignored in the built-in Get-Credential, particularly to allow one-off prompting for passwords inline (that is, in the console, instead of via the credentials dialog), without having to resort to a configuration change.
+The original motivation for writing BetterCredentials was to take advantage of some of the features of PowerShell's underlying credential API which are inexplicably ignored in the built-in `Get-Credential`, particularly to allow one-off prompting for passwords inline (that is, in the console, instead of via the credentials dialog), without having to resort to a configuration change.
 
 You can use the `-Inline` switch to force prompting in the host instead of with a popup dialog, or even pass in a `-Password` value (secure string or not, I won't judge) which allows you to easily create credential objects without a prompt at all.
 
@@ -30,23 +34,22 @@ Storage
 
 Despite the fact that this feature arrived late in the life of BetterCredentials, clearly the best feature is the fact that it can store your passwords in the Windows Credential Manager (sometimes called the Vault), and retrive them on demand so you don't have to enter them over and over. The Windows Credential Manager is what's used by Internet Explorer and Remote Desktop to store passwords, and it keeps them safely encrypted to _your_ account and machine, and provides a user interface where they can be securely reviewed, deleted or even modified.
 
-On out BetterCredentials\Get-Credential command, the `-Store` switch causes the returned credentials to be stored in the vault, and the `-Delete` switch makes sure they are not.
+On our BetterCredentials\Get-Credential command, the `-Store` switch causes the returned credentials to be stored in the vault, and the `-Delete` switch makes sure they are not. As of version 4.5, you can also use the `Set-Credential` and `Remove-Credental` commands to explicitly store or remove credentials.
 
 Once you've stored credentials in the vault, future requests for the same credential -- where you pass in a username (and optionally, a domain) will simply return the credentials without prompting. Because of this, there is also a `-Force` switch (alias: `-New`) which prevents loading and forces the prompt to be displayed. When you need to change a stored password, use both together:
 
     BetterCredentials\Get-Credential -Force -Store
 
+Additionally, in 4.5 there are two commands for searching and/or testing for credentials in the vault: `Find-Credential` and `Test-Credential`...
+
 
 Unattended Usage
 ----------------
 
-When Get-Credential is called from a script running unattended, e.g. in a scheduled task, script execution will hang prompting for credentials if there is no credential in the vault corresponding to the given username. Normally one might execute `Get-Credential username -Store` to populate the credential vault prior to putting the scheduled task into production, but might also forget to do so. `Test-Credential username` solves the script hanging problem by returning a true or false value depending on whether a credential corresponding to `username` is currently stored in the vault. False values can be used to invoke error handling as needed.
-
+When Get-Credential is called from a script running unattended, e.g. in a scheduled task, script execution will hang prompting for credentials if there is no credential in the vault corresponding to the given username. Normally one might execute `Get-Credential username -Store` to populate the credential vault prior to putting the scheduled task into production, but might also forget to do so. In version 4.5 the new `Test-Credential` command solves the script hanging problem by returning a true or false value depending on whether a credential corresponding to a user name is currently stored in the vault.
 
 ##### NOTES
 
 In my scripts and sample code, I nearly always use `BetterCredentials\Get-Credential` as a way to make sure that I'm invoking this overload of Get-Credential, but the idea is that you can simply import the BetterCredentials module in your profile and automatically get this overload whenever you're calling Get-Credential. Of course, I haven't (yet) overloaded the [Credential] transform attribute, so the automatic prompting when you pass a user name to a `-Credential` attribute doesn't use my module -- you have to explicitly call `Get-Credential`.
-
-I feel like I should apoligize for the clumsyness of `Get-Credential YourName -Delete`, and maybe some day I'll write a full set of `Get`, `Set`, `Remove` commands, but for now, there's only one command in this module, so that's how it is.
 
 Licensed under MIT license, see [License](LICENSE).

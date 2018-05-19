@@ -1,4 +1,4 @@
-﻿@{
+@{
 
 # Script module or binary module file associated with this manifest.
 RootModule = 'BetterCredentials.psm1'
@@ -67,7 +67,7 @@ CmdletsToExport = @()
 VariablesToExport = @()
 
 # Aliases to export from this module
-AliasesToExport = @('gcred')
+AliasesToExport = @('gcred', 'scred', 'rcred', 'tcred', 'fdcred')
 
 # DSC resources to export from this module
 # DscResourcesToExport = @()
@@ -76,7 +76,7 @@ AliasesToExport = @('gcred')
 # ModuleList = @()
 
 # List of all files packaged with this module
-FileList = @('CredentialManagement.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.text', 'LICENSE')
+FileList = @('CredentialManagement.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.txt', 'LICENSE')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
@@ -95,7 +95,14 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Update module manifest, metadata, copyrights'
+        ReleaseNotes = '
+            This release adds a lot of functionality to the module, allowing enumeration and deletion, etc.
+
+            - Add Test-Credential for explicitly checking whether a credential is already stored
+            - Add Set-Credential for explicitly storing or updating stored credentials
+            - Add Remove-Credential for clearing stored credentials
+            - Add Find-Credential to search stored credentials
+        '
 
     } # End of PSData hashtable
 

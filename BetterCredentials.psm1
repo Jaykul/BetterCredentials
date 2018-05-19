@@ -1,4 +1,4 @@
-﻿## Copyright (c) 2014, Joel Bennett
+## Copyright (c) 2014, Joel Bennett
 ## Licensed under MIT license
 
 $ScriptRoot = Get-Variable PSScriptRoot -ErrorAction SilentlyContinue | ForEach-Object { $_.Value }
@@ -75,6 +75,7 @@ function Find-Credential {
 
             Filters credentials to find everything for a specific username
     #>
+    [Alias('fdcred')]
     [CmdletBinding()]
     param(
         # A filter for the Target name. May contain an asterisk wildcard at the start OR at the end.
@@ -104,6 +105,8 @@ function Test-Credential {
         v 4.4 Test-Credential added to BetterCredentials
         v 4.5 Changed to be based on Find
     #>
+    [Alias('tcred')]
+    [CmdletBinding()]
     [OutputType("System.Boolean")]
     param(
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
@@ -156,6 +159,7 @@ function Set-Credential {
         [CredentialManagement.PersistanceType]$Persistence = "LocalComputer",
 
         # Some text to describe or further identify the credentials
+        [Alias("Message")]
         [string]$Description
     )
 
@@ -290,6 +294,7 @@ function Get-Credential {
         #
         #  You should use this to describe what the credentials are for.
         [Parameter(ParameterSetName = "Prompted", Position = 3, Mandatory = $false)]
+        [Alias("Message")]
         [string]$Description = $null,
 
         #  Specifies the default domain to use if the user doesn't provide one (by default, this is null)
@@ -433,5 +438,4 @@ function Get-Credential {
     }
 }
 
-Export-ModuleMember -Function *-Credential -Alias gcred, scred, rcred
-
+Export-ModuleMember -Function *-Credential -Alias gcred, scred, rcred, tcred, fdcred
