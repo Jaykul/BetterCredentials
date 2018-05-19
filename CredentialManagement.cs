@@ -119,7 +119,7 @@ namespace CredentialManagement
             return target;
         }
 
-        public static PSObject[] Find(string filter = "")
+        public static PSObject[] Find(string filter = "", bool fix = true)
         {
             uint count = 0;
             int Flag = 0;
@@ -129,6 +129,8 @@ namespace CredentialManagement
             if(string.IsNullOrEmpty(filter)) {
                 filter = null;
                 Flag = 1;
+            } else if(fix) {
+                filter = FixTarget(filter);
             }
 
             NativeMethods.PSCredentialMarshaler helper = new NativeMethods.PSCredentialMarshaler();
@@ -143,7 +145,10 @@ namespace CredentialManagement
                 }
                 helper.CleanUpNativeData(credentialArray);
             } else {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                int error = Marshal.GetLastWin32Error();
+                if( error != (int) NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND ) {
+                    throw new Win32Exception(error);
+                }
             }
             return output;
         }
