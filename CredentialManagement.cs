@@ -194,10 +194,6 @@ namespace CredentialManagement
                 target = FixTarget(target);
             }
 
-            if(!NativeMethods.CredRead(target, type, 0, out cred)) {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-
             return cred;
         }
 
