@@ -189,9 +189,16 @@ namespace CredentialManagement
 
         public static PSObject Load(string target, CredentialType type = CredentialType.Generic, bool fix = true)
         {
-            PSObject cred;
-            if(fix) {
+            if (fix)
+            {
                 target = FixTarget(target);
+            }
+
+            PSObject cred;
+            if (!NativeMethods.CredRead(target, type, 0, out cred))
+            {
+                //Dont do anything here - throwing causes false errors.
+                //throw new Win32Exception(Marshal.GetLastWin32Error());
             }
 
             return cred;
