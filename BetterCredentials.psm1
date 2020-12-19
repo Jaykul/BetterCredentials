@@ -71,6 +71,10 @@ function Find-Credential {
 
             Returns all the credentials stored for windows' Remote Desktop client
         .EXAMPLE
+            Find-Credential *
+
+            Returns all the stored credentials for the user that were placed in the credential vault by BetterCredentials
+        .EXAMPLE
             Find-Credential | Where UserName -match User@Example.org
 
             Filters credentials to find everything for a specific username
@@ -100,6 +104,14 @@ function Test-Credential {
        Test-Credential UserName*
 
        A trailing asterisk is a wildcard character that matches zero or more characters at the end of the given user name.
+    .Example
+       Test-Credential *
+
+       An asterisk alone as the value of the UserName parameter returns true if there are any credentials in the credential vault that were placed there by BetterCredentials.
+    .Example
+       Test-Credential ''
+
+       An empty string value of the UserName parameter returns true if there are any credentials in the credential vault at all, whether or not placed there by BetterCredentials.
      .Notes
        History:
         v 4.4 Test-Credential added to BetterCredentials
