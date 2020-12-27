@@ -19,6 +19,12 @@ The `-AllowClobber` switch is to allow the BetterCredentials module to do what i
 Features
 ========
 
+BetterCredentials is backwards compatible in the sense that having the module loaded will not break code that uses the built-in commands or attributes in PowerShell. You can, for instance, `Import-Module BetterCredentials` on your computer, and all scripts which call Get-Credential will automatically import stored credentials! Of course, if you write scripts or functions using the additional functionality to control the prompt messages or to -Store, then you have a dependency on BetterCredentials, and you should add: `#requires -Module BetterCredentials`.
+
+Most of the features are available through _both_ the `Get-Credential` command and the `BetterCredentials.CredentialAttribute`, so once you've required the module, you can simply add the attribute to your Credential parameters to store (and load) credentials in the Windows Credential Vault, and control the prompt text, title, etc.
+
+One final note, before we get into the details: BetterCredentials is a old module (from the era of PowerShell 2), and is consequently a Windows-only module. Parts of it could be ported to be cross-platform, but apart from the prompting (which I will try to get added to PowerShell 7.2) the rest of the functionality revolves around storing credentials in the Windows Credential Vault, so it's going to stay Windows-only.
+
 Prompting
 ---------
 
@@ -42,7 +48,6 @@ Once you've stored credentials in the vault, future requests for the same creden
 
 Additionally, in 4.5 there are two commands for searching and/or testing for credentials in the vault: `Find-Credential` and `Test-Credential`...
 
-
 Unattended Usage
 ----------------
 
@@ -50,6 +55,8 @@ When Get-Credential is called from a script running unattended, e.g. in a schedu
 
 ##### NOTES
 
-In my scripts and sample code, I nearly always use `BetterCredentials\Get-Credential` as a way to make sure that I'm invoking this overload of Get-Credential, but the idea is that you can simply import the BetterCredentials module in your profile and automatically get this overload whenever you're calling Get-Credential. Of course, I haven't (yet) overloaded the [Credential] transform attribute, so the automatic prompting when you pass a user name to a `-Credential` attribute doesn't use my module -- you have to explicitly call `Get-Credential`.
+In my scripts and sample code, I nearly always use `BetterCredentials\Get-Credential` as a way to make sure that I'm invoking this overload of Get-Credential, but the idea is that you can simply import the BetterCredentials module in your profile and automatically get this overload whenever you're calling Get-Credential.
+
+Although I've added a better Credential attribute, I haven't stepped on the `System.Management.Automation` namespace, so the automatic prompting when you pass a user name to a `-Credential` attribute doesn't use my defintion -- you have to explicitly call `Get-Credential` or write a `ProxyCommand` using the `BetterCredentials.CredentialAttribute`.
 
 Licensed under MIT license, see [License](LICENSE).
