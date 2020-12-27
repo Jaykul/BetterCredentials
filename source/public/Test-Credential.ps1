@@ -48,6 +48,6 @@ function Test-Credential {
         } else {
             $target = $UserName.ToString()
         }
-        return [CredentialManagement.Store]::Find($target, !$AllCredentials).Count -gt 0
+        return [BetterCredentials.Store]::Find($target, !$AllCredentials).Count -gt 0
     }
 }

@@ -129,17 +129,17 @@ function Get-Credential {
                 $Target = "$(if ($Domain) {"${Domain}\" })${UserName}"
             }
             if ($Delete) {
-                [CredentialManagement.Store]::Delete($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
+                [BetterCredentials.Store]::Delete($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
             } else {
                 try {
-                    $Credential = [CredentialManagement.Store]::Load($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
+                    $Credential = [BetterCredentials.Store]::Load($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
                 } catch {}
 
                 # support loading any type of credentials if they specify a Target
                 if (!$Credential -and $PSBoundParameters.ContainsKey("Target")) {
-                    foreach ($Type in (([CredentialManagement.CredentialType]::None)..([CredentialManagement.CredentialType]::Maximum))) {
+                    foreach ($Type in (([BetterCredentials.CredentialType]::None)..([BetterCredentials.CredentialType]::Maximum))) {
                         try {
-                            $Credential = [CredentialManagement.Store]::Load($Target, $Type, !$PSBoundParameters.ContainsKey("Target"))
+                            $Credential = [BetterCredentials.Store]::Load($Target, $Type, !$PSBoundParameters.ContainsKey("Target"))
                         } catch {}
                         if ($Credential) { break }
                     }
@@ -228,7 +228,7 @@ function Get-Credential {
             if ($PSBoundParameters.ContainsKey("Target")) {
                 Add-Member -InputObject $Credential -MemberType NoteProperty -Name Target -Value $Target -Force
             }
-            [CredentialManagement.Store]::Save($Credential)
+            [BetterCredentials.Store]::Save($Credential)
         }
 
         return $Credential

@@ -43,5 +43,5 @@ function Find-Credential {
     if (!$AllCredentials -and !$Filter) {
         $Filter = "*"
     }
-    [CredentialManagement.Store]::Find($Filter, !$AllCredentials)
+    [BetterCredentials.Store]::Find($Filter, !$AllCredentials)
 }

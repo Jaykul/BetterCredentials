@@ -29,10 +29,10 @@ function Set-Credential {
         [string]$Target,
 
         # How to store the credential ("Generic" or "DomainPassword")
-        [CredentialManagement.CredentialType]$Type = "Generic",
+        [BetterCredentials.CredentialType]$Type = "Generic",
 
         # Where to store the credential ("Session", "LocalComputer", "Enterprise")
-        [CredentialManagement.PersistanceType]$Persistence = "LocalComputer",
+        [BetterCredentials.PersistanceType]$Persistence = "LocalComputer",
 
         # Some text to describe or further identify the credentials
         [Alias("Message")]
@@ -67,6 +67,6 @@ function Set-Credential {
             $Credential | Add-Member NoteProperty Persistence $Persistence
         }
 
-        [CredentialManagement.Store]::Save($Credential)
+        [BetterCredentials.Store]::Save($Credential)
     }
 }

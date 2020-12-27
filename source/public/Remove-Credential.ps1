@@ -14,11 +14,11 @@ function Remove-Credential {
 
         # How to store the credential ("Generic" or "DomainPassword")
         [Parameter(ValueFromPipelineByPropertyName)]
-        [CredentialManagement.CredentialType]$Type = "Generic"
+        [BetterCredentials.CredentialType]$Type = "Generic"
     )
 
     process {
-        [CredentialManagement.Store]::Delete($Target, $Type, $false)
+        [BetterCredentials.Store]::Delete($Target, $Type, $false)
     }
 
 }

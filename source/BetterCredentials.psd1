@@ -42,7 +42,7 @@ AliasesToExport = @('gcred', 'scred', 'rcred', 'tcred', 'fdcred')
 # ModuleList = @()
 
 # List of all files packaged with this module
-# FileList = @('CredentialManagement.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.txt', 'LICENSE')
+# FileList = @('BetterCredentials.cs','BetterCredentials.psm1','BetterCredentials.psd1','about_bettercredentials.help.txt', 'LICENSE')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
