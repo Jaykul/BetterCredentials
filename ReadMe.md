@@ -6,29 +6,28 @@ The goal of BetterCredentials is to provide a completely backwards-compatible Ge
 TO INSTALL:
 ===========
 
-Use the PowerShellGet module included in WMF (PowerShell) 5, or the [PackageManagement Preview](http://www.microsoft.com/en-us/download/details.aspx?id=49186) for PowerShell 3 and 4.
-
-Just run:
+Use the PowerShellGet module included in PowerShell. Just run:
 
 ```posh
     Install-Module BetterCredentials -AllowClobber
 ```
 
-The `-AllowClobber` switch is to allow the BetterCredentials module to do what it's designed to do: provide you a better, backwards compatible `Get-Credential` command, clobbering the built-in version.
+The `-AllowClobber` switch is to allow the BetterCredentials module to do what it's designed to do: provide you a better, backwards compatible `Get-Credential` command, _clobbering_ the built-in version when the module's loaded.
 
 Features
 ========
 
 BetterCredentials is backwards compatible in the sense that having the module loaded will not break code that uses the built-in commands or attributes in PowerShell. You can, for instance, `Import-Module BetterCredentials` on your computer, and all scripts which call Get-Credential will automatically import stored credentials! Of course, if you write scripts or functions using the additional functionality to control the prompt messages or to -Store, then you have a dependency on BetterCredentials, and you should add: `#requires -Module BetterCredentials`.
 
-Most of the features are available through _both_ the `Get-Credential` command and the `BetterCredentials.CredentialAttribute`, so once you've required the module, you can simply add the attribute to your Credential parameters to store (and load) credentials in the Windows Credential Vault, and control the prompt text, title, etc.
+Most of the features are available through _both_ the `Get-Credential` command and the new `BetterCredentials.CredentialAttribute`, so once you've required the module, you can simply add the attribute to your Credential parameters to store (and load) credentials in the Windows Credential Vault, and control the prompt text, title, etc.
+
 
 One final note, before we get into the details: BetterCredentials is a old module (from the era of PowerShell 2), and is consequently a Windows-only module. Parts of it could be ported to be cross-platform, but apart from the prompting (which I will try to get added to PowerShell 7.2) the rest of the functionality revolves around storing credentials in the Windows Credential Vault, so it's going to stay Windows-only.
 
 Prompting
 ---------
 
-The original motivation for writing BetterCredentials was to take advantage of some of the features of PowerShell's underlying credential API which are inexplicably ignored in the built-in `Get-Credential`, particularly to allow one-off prompting for passwords inline (that is, in the console, instead of via the credentials dialog), without having to resort to a configuration change.
+The original motivation for writing BetterCredentials was to take advantage of some of the features of PowerShell's underlying credential API which are inexplicably ignored in the built-in `Get-Credential`, particularly to allow one-off prompting for passwords inline in Windows PowerShell (that is, in the console, instead of via the credentials dialog), without having to resort to a configuration change.
 
 You can use the `-Inline` switch to force prompting in the host instead of with a popup dialog, or even pass in a `-Password` value (secure string or not, I won't judge) which allows you to easily create credential objects without a prompt at all.
 
@@ -52,6 +51,28 @@ Unattended Usage
 ----------------
 
 When Get-Credential is called from a script running unattended, e.g. in a scheduled task, script execution will hang prompting for credentials if there is no credential in the vault corresponding to the given username. Normally one might execute `Get-Credential username -Store` to populate the credential vault prior to putting the scheduled task into production, but might also forget to do so. In version 4.5 the new `Test-Credential` command solves the script hanging problem by returning a true or false value depending on whether a credential corresponding to a user name is currently stored in the vault.
+
+
+Credential Attribute
+--------------------
+
+The `[BetterCredentials.Credential()]` attribute is compatible with, but better than the built-in `[Credential()]` attribute. It supports specifying the `Title` and `Message` for the credential prompt, as well as the `Target` and `Description` to be stored in the credential, and of course, since this is **BetterCredentials**, it supports a `Store` switch that automatically saves credentials if you pass the username when calling a command with the attribute on it, and will load them if you pass the same username later.
+
+Type Adapter
+------------
+
+New in version 5.0 are type adapters for NetworkCredential and SqlCredential, so you can now use PSCredential interchangeably with those types, passing any of them to APIs and cmdlets that need any of them, as long as you `#requires -Module BetterCredentials`.
+
+
+converters,
+            5.0 Big release (but tiny breaking change)
+
+            1. Added support for Microsoft.PowerShell.SecretManagement (on Windows only). Exposes all credentials in the Windows Credential Manager to SecretManagement.
+            2. Added a
+            2. Added a converter to allow casting to different credential types:
+                - System.Management.Automation.PSCredential
+                - System.Net.NetworkCredential
+                - System.Data.SqlClient.SqlCredential
 
 ##### NOTES
 

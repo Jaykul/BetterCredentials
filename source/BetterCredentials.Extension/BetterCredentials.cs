@@ -1,18 +1,18 @@
 // Portions Copyright (c) Microsoft Corporation
-// Copyright (c) 2014, Joel Bennett
+// Copyright (c) 2014-2022, Joel Bennett
 // Licensed under MIT license
 
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
+using System.Management.Automation;
 using Microsoft.Win32.SafeHandles;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace CredentialManagement
+namespace BetterCredentials
 {
-    using System.Management.Automation;
-    using System.Security;
 
     public enum CredentialType : uint
     {
@@ -105,23 +105,7 @@ namespace CredentialManagement
 
     public static class Store
     {
-        private static string FixTarget(string target)
-        {
-            if (!target.Contains(":"))
-            {
-                if (target.Contains("="))
-                {
-                    target = "MicrosoftPowerShell:" + target;
-                }
-                else
-                {
-                    target = "MicrosoftPowerShell:user=" + target;
-                }
-            }
-            return target;
-        }
-
-        public static PSObject[] Find(string filter = "", bool fix = true)
+        public static PSObject[] Find(string filter = "")
         {
             uint count = 0;
             int Flag = 0;
@@ -133,11 +117,6 @@ namespace CredentialManagement
                 filter = null;
                 Flag = 1;
             }
-            else if(fix)
-            {
-                filter = FixTarget(filter);
-            }
-
             NativeMethods.PSCredentialMarshaler helper = new NativeMethods.PSCredentialMarshaler();
 
             if (NativeMethods.CredEnumerate(filter, Flag, out count, out credentialArray))
@@ -177,24 +156,17 @@ namespace CredentialManagement
             }
         }
 
-        public static void Delete(string target, CredentialType type = CredentialType.Generic, bool fix = true)
+        public static void Delete(string target, CredentialType type = CredentialType.Generic)
         {
-            if (fix) {
-                target = FixTarget(target);
-            }
             if (!NativeMethods.CredDelete(target, type, 0))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
 
-        public static PSObject Get(string target, bool fix = true)
+        public static PSObject Get(string target)
         {
             PSObject cred = null;
-            if (fix)
-            {
-                target = FixTarget(target);
-            }
 
             if (!NativeMethods.CredFindBestCredential(target, CredentialType.Generic, 0, out cred))
             {
@@ -210,13 +182,9 @@ namespace CredentialManagement
         }
 
 
-        public static PSObject Load(string target, CredentialType type = CredentialType.Generic, bool fix = true)
+        public static PSObject Load(string target, CredentialType type = CredentialType.Generic)
         {
             PSObject cred = null;
-            if (fix)
-            {
-                target = FixTarget(target);
-            }
 
             if (!NativeMethods.CredRead(target, type, 0, out cred))
             {
@@ -240,15 +208,24 @@ namespace CredentialManagement
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
     public sealed class CredentialAttribute : ArgumentTransformationAttribute
     {
-        public bool MandatoryPassword { get; set; } = false;
-        public bool Save { get; set; } = false;
-        public string Title { get; set; } = "PowerShell credential request";
-        public string Prompt { get; set; } = "Enter your credentials.";
-        public string Domain { get; set; } = string.Empty;
-        public string Target { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
+        public bool MandatoryPassword { get; set; }
+        public bool Save { get; set; }
+        public string Title { get; set; }
+        public string Message { get; set; }
+        public string Domain { get; set; }
+        public string Target { get; set; }
+        public string Description { get; set; }
         public PSCredentialTypes AllowedCredentialTypes { get; set; }
         public PSCredentialUIOptions Options { get; set; }
+
+        public CredentialAttribute()
+        {
+            Title = "PowerShell credential request";
+            Message = "Enter your credentials.";
+            Domain = string.Empty;
+            Target = string.Empty;
+            Description = string.Empty;
+        }
 
         /// <summary>
         /// Transforms the input data to an PSCredential.
@@ -274,7 +251,7 @@ namespace CredentialManagement
                 (engineIntrinsics.Host == null) ||
                 (engineIntrinsics.Host.UI == null))
             {
-                throw new ArgumentNullException(nameof(engineIntrinsics));
+                throw new ArgumentNullException("engineIntrinsics");
             }
 
             if (inputData == null)
@@ -303,7 +280,7 @@ namespace CredentialManagement
                 {
                     // System.Console.WriteLine($"Loading Target: {Target}");
                     try {
-                        cred = CredentialManagement.Store.Load(Target, CredentialType.Generic, false).BaseObject as PSCredential;
+                        cred = BetterCredentials.Store.Load(Target, CredentialType.Generic, false).BaseObject as PSCredential;
                         shouldPrompt = false;
                     } catch {}
 
@@ -312,7 +289,7 @@ namespace CredentialManagement
                 {
                     // System.Console.WriteLine($"Loading UserName: {userName}");
                     try {
-                        cred = CredentialManagement.Store.Load(userName).BaseObject as PSCredential;
+                        cred = BetterCredentials.Store.Load(userName).BaseObject as PSCredential;
                         shouldPrompt = false;
                     } catch {}
                 }
@@ -323,7 +300,7 @@ namespace CredentialManagement
                 // System.Console.WriteLine($"Prompting {userName}");
                 cred = engineIntrinsics.Host.UI.PromptForCredential(
                     Title,
-                    Prompt,
+                    Message,
                     userName,
                     Domain,
                     AllowedCredentialTypes,
@@ -349,7 +326,7 @@ namespace CredentialManagement
                 }
 
                 // System.Console.WriteLine($"Saving {storeCred}");
-                CredentialManagement.Store.Save(storeCred);
+                BetterCredentials.Store.Save(storeCred);
             }
             return cred;
         }
@@ -487,7 +464,7 @@ namespace CredentialManagement
                                 if (m.Value != null)
                                     nCred.Type = (CredentialType)m.Value;
                                 break;
-                            case "Persistence":
+                            case "Persistance":
                                 if (m.Value != null)
                                     nCred.Persist = (PersistanceType)m.Value;
                                 break;
@@ -525,7 +502,7 @@ namespace CredentialManagement
                 credEx.Members.Add(new PSNoteProperty("Target", ncred.TargetName));
                 credEx.Members.Add(new PSNoteProperty("TargetAlias", ncred.TargetAlias));
                 credEx.Members.Add(new PSNoteProperty("Type", (CredentialType)ncred.Type));
-                credEx.Members.Add(new PSNoteProperty("Persistence", (PersistanceType)ncred.Persist));
+                credEx.Members.Add(new PSNoteProperty("Persistance", (PersistanceType)ncred.Persist));
                 credEx.Members.Add(new PSNoteProperty("Description", ncred.Comment));
                 credEx.Members.Add(new PSNoteProperty("LastWriteTime", DateTime.FromFileTime((((long)ncred.LastWritten.dwHighDateTime) << 32) + ncred.LastWritten.dwLowDateTime)));
 

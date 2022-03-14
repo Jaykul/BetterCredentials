@@ -16,7 +16,7 @@ Author = 'Joel Bennett'
 CompanyName = 'HuddledMasses.org'
 
 # Copyright statement for this module
-Copyright = '(c) 2014-2020 Joel Bennett. All rights reserved.'
+Copyright = '(c) 2014-2022 Joel Bennett. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'A (compatible) major upgrade for Get-Credential, including support for storing credentials in Windows Credential Manager, and for specifying the full prompts when asking for credentials, etc.'
@@ -29,7 +29,7 @@ RequiredAssemblies = @()
 ScriptsToProcess = @()
 TypesToProcess = @()
 FormatsToProcess = @()
-NestedModules = @()
+NestedModules = @(".\BetterCredentials.Extension")
 CmdletsToExport = @()
 VariablesToExport = @()
 DscResourcesToExport = @()
@@ -49,7 +49,7 @@ PrivateData = @{
 
     PSData = @{
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @('Credential','Get-Credential','Vault','Storage')
+        Tags = @('Credential','Get-Credential','Vault','Storage','SecretManagement','CredentialManager','Windows')
 
         # A URL to the license for this module.
         LicenseUri = 'http://opensource.org/licenses/MIT'
@@ -62,10 +62,22 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = '
-            5.0 Added some cast operators that are compatible with, but better than the built-in options.
+            5.0 Big release (but tiny breaking change)
 
+            1. Added support for Microsoft.PowerShell.SecretManagement (on Windows only). Exposes all credentials in the Windows Credential Manager to SecretManagement.
+            2. Added a [BetterCredentials.Credential()] attribute that is compatible with, but better than the built-in one. It supports specifying the Title and Message for the credential prompt, as well as the "Target" and "Description" to be stored in the credential. Of course, since this is BetterCredentials, it also supports automatically saving and loading credentials automatically.
+            2. Added a converter to allow casting to different credential types:
+                - System.Management.Automation.PSCredential
+                - System.Net.NetworkCredential
+                - System.Data.SqlClient.SqlCredential
+
+            Breaking changes:
             - By default, Find and Test now search only credentials added by BetterCredentials.
                 To get the previous behavior, you need to provide the -AllCredentials switch
+            - Removed the -Delete switch from Get-Credential
+                It was a bad idea, and we no longer need it, since we added Remove-Credential
+                Since this is a breaking change release, might as well remove it
+
 
 
             4.5 Release adds a lot of functionality to the module, allowing enumeration and deletion, etc.
