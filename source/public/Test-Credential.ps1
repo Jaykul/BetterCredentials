@@ -29,7 +29,7 @@ function Test-Credential {
             History:
             v 4.4 Test-Credential added to BetterCredentials
             v 4.5 Changed to be based on Find
-            v 5.0 Added the AllCredentials switch. If you don't set it, you're only searching/testing credentials added by this module
+            v 5.0 Changed to use Get-SecretInfo
     #>
     [Alias('tcred')]
     [CmdletBinding()]
@@ -37,10 +37,7 @@ function Test-Credential {
     param(
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [Alias("Credential")]
-        [PSObject]$UserName,
-
-        # Include all credentials, rather than just the MicrosoftPowerShell: credentials (created by BetterCredentials)
-        [switch]$AllCredentials
+        [PSObject]$UserName
     )
     process {
         if ($UserName -is [System.Management.Automation.PSCredential]) {
@@ -48,6 +45,15 @@ function Test-Credential {
         } else {
             $target = $UserName.ToString()
         }
-        return [BetterCredentials.Store]::Find($target, !$AllCredentials).Count -gt 0
+
+        if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
+            try {
+                @(Microsoft.PowerShell.SecretManagement\Get-SecretInfo "$CredentialPrefix$Target" @SecretManagementParameter).Count -gt 0
+            } catch {}
+        } else {
+            try {
+                [BetterCredentials.Store]::Find("$CredentialPrefix$Target").Count -gt 0
+            } catch {}
+        }
     }
 }

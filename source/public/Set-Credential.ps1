@@ -29,9 +29,11 @@ function Set-Credential {
         [string]$Target,
 
         # How to store the credential ("Generic" or "DomainPassword")
+        # NOTE: DomainPassword only works on Windows, and will bypass SecretManagement
         [BetterCredentials.CredentialType]$Type = "Generic",
 
         # Where to store the credential ("Session", "LocalComputer", "Enterprise")
+        # NOTE: Only applies when bypassing SecretManagement
         [BetterCredentials.PersistanceType]$Persistence = "LocalComputer",
 
         # Some text to describe or further identify the credentials
@@ -39,34 +41,51 @@ function Set-Credential {
         [string]$Description
     )
     process {
-        # Weird validation rules:
-        if ($Type -eq "DomainPassword") {
-            if ($Target.Length -gt 337) {
-                throw "Target name must be less than 337 characters long for domain credentials"
-            }
-        }
-
-        if ($Credential.Password.Length -gt 256) {
-            # Because it's stored as UTF-16 bytes with a max of 512
-            throw "Credential Password cannot be more than 256 characters"
-        }
-
-        if ($Target) {
-            $Credential | Add-Member NoteProperty Target $Target -Force
-        }
-        if ($Description) {
-            $Credential | Add-Member NoteProperty Description $Description -Force
-        }
-
+        $Metadata = @{}
         # If the user passed the value, or if it's not set
         if ($PSBoundParameters.ContainsKey("Type") -or !$Credential.Type) {
             $Credential | Add-Member NoteProperty Type $Type -Force
+            $Metadata["Type"] = $Type
         }
 
         if ($PSBoundParameters.ContainsKey("Persistence") -or !$Credential.Persistence) {
             $Credential | Add-Member NoteProperty Persistence $Persistence
+            $Metadata["Persistence"] = $Persistence
         }
 
-        [BetterCredentials.Store]::Save($Credential)
+        if ($PSBoundParameters.ContainsKey("Description")) {
+            $Credential | Add-Member NoteProperty Description $Description -Force
+            $Metadata["Description"] = $Description
+        }
+
+        # TODO: Do we need to skip this is $Type -ne "Generic" ?
+        if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
+
+            Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @SecretManagementParameter
+
+            if ($Metadata) {
+                Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @SecretManagementParameter
+            }
+        } else {
+            # Weird validation rules:
+            if ($Type -eq "DomainPassword") {
+                if ($Target.Length -gt 337) {
+                    throw "Target name must be less than 337 characters long for domain credentials"
+                }
+            }
+
+            if ($Credential.Password.Length -gt 256) {
+                # Because it's stored as UTF-16 bytes with a max of 512
+                throw "Credential Password cannot be more than 256 characters"
+            }
+
+            if ($Target) {
+                $Credential | Add-Member NoteProperty Target "$CredentialPrefix$Target" -Force
+            } else {
+                $Credential | Add-Member NoteProperty Target "$CredentialPrefix$($Credential.UserName)" -Force
+            }
+
+            [BetterCredentials.Store]::Save($Credential)
+        }
     }
 }

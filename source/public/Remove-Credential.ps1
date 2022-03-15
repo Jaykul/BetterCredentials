@@ -10,15 +10,14 @@ function Remove-Credential {
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipelineByPropertyName, ValueFromPipeline, Mandatory)]
-        [string]$Target,
-
-        # How to store the credential ("Generic" or "DomainPassword")
-        [Parameter(ValueFromPipelineByPropertyName)]
-        [BetterCredentials.CredentialType]$Type = "Generic"
+        [string]$Target
     )
 
     process {
-        [BetterCredentials.Store]::Delete($Target, $Type, $false)
+        if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Remove-Secret -ErrorAction SilentlyContinue)) {
+            Microsoft.PowerShell.SecretManagement\Remove-Secret -Name "$CredentialPrefix$Target" @SecretManagementParameter
+        } else {
+            [BetterCredentials.Store]::Delete("$CredentialPrefix$Target")
+        }
     }
-
 }

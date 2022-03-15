@@ -5,7 +5,9 @@ function Find-Credential {
 
         .Description
             Find-Credential is a wrapper around CredEnumerate
-            It allows you to retrieve some or all credentials from the Windows Credential Manager (Vault)
+            It allows you to retrieve some or all credentials stored by BetterCredentials
+
+            As of 5.0 it uses Get-SecretInfo if SkipSecretManagement isn't set
 
         .Example
             Find-Credential
@@ -14,34 +16,25 @@ function Find-Credential {
         .Example
             Find-Credential User@Example.org
 
-            Filters credentials stored by BetterCredentials for User@Example.org (where the Target is: 'MicrosoftPowerShell:user=User@Example.org')
-        .Example
-            Find-Credential -AllCredentials
-
-            Returns all the stored Windows credentials for the user (including BetterCredentials)
-        .Example
-            Find-Credential TERMSRV/* -AllCredentials
-
-            Returns all the credentials stored for Windows' Remote Desktop client
-        .Notes
-            History:
-            v 5.0 Added the AllCredentials switch. If you don't set it, you're only searching credentials added by this module
+            Filters credentials stored by BetterCredentials for User@Example.org
     #>
     [Alias('fdcred')]
     [CmdletBinding()]
     param(
         # A filter for the Target name. May contain an asterisk wildcard at the start OR at the end.
         [Alias("Target")]
-        [String]$Filter,
-
-        # When -AllCredentials is set, the filter is passed directly to the Windows API
-        # Otherwise, the filter matches Get-Credential's Target parameter:
-        # If it has no ':' or '=' in it, it's prefixed with 'MicrosoftPowerShell:user='
-        # If it has an '=' in it, it's prefixed with 'MicrosoftPowerShell:'
-        [switch]$AllCredentials
+        [String]$Filter = "*"
     )
-    if (!$AllCredentials -and !$Filter) {
-        $Filter = "*"
+    $Filter = "$CredentialPrefix$Filter"
+
+    if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
+        try {
+            Microsoft.PowerShell.SecretManagement\Get-SecretInfo $Filter @SecretManagementParameter |
+                Microsoft.PowerShell.SecretManagement\Get-Secret
+        } catch {}
+    } else {
+        try {
+            [BetterCredentials.Store]::Find($Filter)
+        } catch {}
     }
-    [BetterCredentials.Store]::Find($Filter, !$AllCredentials)
 }

@@ -1,57 +1,37 @@
 function Get-Credential {
     <#
-       .Synopsis
-          Gets a credential object based on a user name and password.
-       .Description
-          The Get-Credential function creates a credential object for a specified username and password, with an optional domain. You can use the credential object in security operations.
+        .Synopsis
+            Gets a credential object based on a user name and password.
+        .Description
+            The Get-Credential function creates a credential object for a specified username and password, with an optional domain. You can use the credential object in security operations.
 
-          This function is an improvement over the default Get-Credential cmdlet in several ways:
-          Obviously it accepts more parameters to customize the security prompt (including forcing the call through the console)
-          It also supports storing and retrieving credentials in your Windows Credential Manager, but otherwise functions identically to the built-in command
+            This function is an improvement over the default Get-Credential cmdlet in several ways:
+            Obviously it accepts more parameters to customize the security prompt (including forcing the call through the console)
+            It also supports storing and retrieving credentials in your Windows Credential Manager, but otherwise functions identically to the built-in command
 
-          Whenever you pass a UserName as a parameter to Get-Credential, it will attempt to read the credential from your Vault.
-       .Example
-          Get-Credential UserName -store
+            Whenever you pass a UserName as a parameter to Get-Credential, it will attempt to read the credential from your Vault.
+        .Example
+            Get-Credential UserName -store
 
-          If you haven't stored the password for "UserName", you'll be prompted with the regular PowerShell credential prompt, otherwise it will read the stored password.
-          In either case, it will store (update) the credentials in the Vault
-       .Example
-          $Cred = Get-Credential -user key -pass secret | Get-Credential -Store
-          Get-Credential -user key | % { $_.GetNetworkCredential() } | fl *
+            If you haven't stored the password for "UserName", you'll be prompted with the regular PowerShell credential prompt, otherwise it will read the stored password.
+            In either case, it will store (update) the credentials in the Vault
+        .Example
+            $Cred = Get-Credential -user key -pass secret | Get-Credential -Store
+            Get-Credential -user key | % { $_.GetNetworkCredential() } | fl *
 
-          This example demonstrates the ability to pass passwords as a parameter.
-          It also shows how to pass credentials in via the pipeline, and then to store and retrieve them
-          NOTE: These passwords are stored in the Windows Credential Vault.  You can review them in the Windows "Credential Manager" (they will show up prefixed with "WindowsPowerShell")
-       .Example
-          Get-Credential -inline
+            This example demonstrates the ability to pass passwords as a parameter.
+            It also shows how to pass credentials in via the pipeline, and then to store and retrieve them
+            NOTE: These passwords are stored in the Windows Credential Vault.  You can review them in the Windows "Credential Manager" (they will show up prefixed with "WindowsPowerShell")
+        .Example
+            Get-Credential -inline
 
-          Will prompt for credentials inline in the host instead of in a popup dialog
+            Will prompt for credentials inline in the host instead of in a popup dialog
         .Notes
-          History:
-           v 4.5 Add Find-Credential, Set-Credential, Remove-Credential
-           v 4.4 Add a Test-Credential
-           v 4.3 Update module metadata and copyrights, etc.
-           v 4.2 Provide -Force switch to force prompting instead of loading
-           v 4.1 Modularize and Release
-           v 4.0 Change -Store to save credentials in the Windows Credential Manager (Vault)
-           v 3.0 Modularize so I can "Requires" it
-           v 2.9 Reformat to my new coding style...
-           v 2.8 Refactor EncodeSecureString (and add unused DecodeSecureString for completeness)
-                 NOTE these are not at all like the built-in ConvertFrom/ConvertTo-SecureString
-           v 2.7 Fix double prompting issue when using -Inline
-                 Use full typename for PSCredential to maintain V2 support - Thanks Joe Hayes
-           v 2.6 Put back support for passing in the domain when getting credentials without prompting
-           v 2.5 Added examples for the help
-           v 2.4 Fix a bug in -Store when the UserName isn't passed in as a parameter
-           v 2.3 Add -Store switch and support putting credentials into the file system
-           v 2.1 Fix the comment help and parameter names to agree with each other (whoops)
-           v 2.0 Rewrite for v2 to replace the default Get-Credential
-           v 1.2 Refactor ShellIds key out to a variable, and wrap lines a bit
-           v 1.1 Add -Console switch and set registry values accordingly (ouch)
-           v 1.0 Add Title, Description, Domain, and UserName options to the Get-Credential cmdlet
+            For a brief history of this command, see the ChangeLog.
+
     #>
     [Alias('gcred')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "Password", Justification = "Let other people worry about that, this is a useful option")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "Password", Justification = "Let the user beware, this is a useful option")]
     [OutputType("System.Management.Automation.PSCredential")]
     [CmdletBinding(DefaultParameterSetName = "Prompted")]
     param(
@@ -69,10 +49,10 @@ function Get-Credential {
         [Parameter(ParameterSetName = "Prompted", Position = 2, Mandatory = $false)]
         [string]$Title = $null,
 
-        # The Target allows you to set a consistent name for credentials so you can store multiple credentials with the same username and be able to recall them.
+        # The Target allows you to specify what the credentials are for, so you can store multiple credentials with the same username but different passwords.
         # For example, you could set the target to the URL of a website or the name of a server the credential is for.
         #
-        # By default BetterCredentials builds a target string from the credential's user name: MicrosoftPowerShell:user=$User
+        # If not specified, by default BetterCredentials builds a target string from the credential's user name: MicrosoftPowerShell:user=$User
         [Parameter()]
         [string]$Target,
 
@@ -98,16 +78,10 @@ function Get-Credential {
         [Parameter(ParameterSetName = "Prompted", Mandatory = $false)]
         [switch]$Inline,
 
-        #  Store the credential in the file system (overwriting existing credentials)
-        #  NOTE: These passwords are STORED ON DISK encrypted using Windows DPAPI
-        #        They are encrypted, but anyone with ACCESS TO YOUR LOGIN ACCOUNT can decrypt them
+        #  Store the credential in SecretManagement (overwriting existing credentials for the same target)
         [Parameter(ParameterSetName = "Prompted", Mandatory = $false)]
         [Parameter(ParameterSetName = "Promptless", Mandatory = $false)]
         [switch]$Store,
-
-        #  Remove stored credentials from the file system
-        [Parameter(ParameterSetName = "Delete", Mandatory = $true)]
-        [switch]$Delete,
 
         # Ignore stored credentials and re-prompt
         # Note: when combined with -Store this overwrites stored credentials
@@ -123,23 +97,32 @@ function Get-Credential {
         [Management.Automation.PSCredential]$Credential = $null
         if ($UserName -is [System.Management.Automation.PSCredential]) {
             $Credential = $UserName
+            if (!$PSBoundParameters.ContainsKey("Target")) {
+                $Target = "$(if ($Domain) {"${Domain}\" })$($Credential.UserName)"
+            }
         } elseif (!$Force -and $UserName -ne $null -or $Target) {
             $UserName = "$UserName"
             if (!$PSBoundParameters.ContainsKey("Target")) {
                 $Target = "$(if ($Domain) {"${Domain}\" })${UserName}"
             }
-            if ($Delete) {
-                [BetterCredentials.Store]::Delete($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
+
+            # For cross-platform purposes, we now use SecretManagement to store credentials when it's available
+            # If SecretManagement is not available, we support the old method via our Extension module
+            # Note: this means we're using the _default_ SecretVault?
+            if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-Secret -ErrorAction SilentlyContinue)) {
+                try {
+                    $Credential = Microsoft.PowerShell.SecretManagement\Get-Secret "$CredentialPrefix$Target" @SecretManagementParameter
+                } catch {}
             } else {
                 try {
-                    $Credential = [BetterCredentials.Store]::Load($Target, "Generic", !$PSBoundParameters.ContainsKey("Target"))
+                    $Credential = [BetterCredentials.Store]::Load("$CredentialPrefix$Target", "Generic")
                 } catch {}
 
                 # support loading any type of credentials if they specify a Target
                 if (!$Credential -and $PSBoundParameters.ContainsKey("Target")) {
                     foreach ($Type in (([BetterCredentials.CredentialType]::None)..([BetterCredentials.CredentialType]::Maximum))) {
                         try {
-                            $Credential = [BetterCredentials.Store]::Load($Target, $Type, !$PSBoundParameters.ContainsKey("Target"))
+                            $Credential = [BetterCredentials.Store]::Load("$CredentialPrefix$Target", $Type)
                         } catch {}
                         if ($Credential) { break }
                     }
@@ -222,13 +205,34 @@ function Get-Credential {
         }
 
         if ($Store) {
-            if ($Description) {
-                Add-Member -InputObject $Credential -MemberType NoteProperty -Name Description -Value $Description
+
+            $Metadata = @{}
+            # If the user passed the value, or if it's not set
+            if ($PSBoundParameters.ContainsKey("Type") -or !$Credential.Type) {
+                $Credential | Add-Member NoteProperty Type $Type -Force
+                $Metadata["Type"] = $Type
             }
-            if ($PSBoundParameters.ContainsKey("Target")) {
-                Add-Member -InputObject $Credential -MemberType NoteProperty -Name Target -Value $Target -Force
+
+            if ($PSBoundParameters.ContainsKey("Persistence") -or !$Credential.Persistence) {
+                $Credential | Add-Member NoteProperty Persistence $Persistence
+                $Metadata["Persistence"] = $Persistence
             }
-            [BetterCredentials.Store]::Save($Credential)
+
+            if ($PSBoundParameters.ContainsKey("Description")) {
+                $Credential | Add-Member NoteProperty Description $Description -Force
+                $Metadata["Description"] = $Description
+            }
+            if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
+                Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @SecretManagementParameter
+
+                if ($Metadata) {
+                    Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @SecretManagementParameter
+                }
+            } else {
+                Add-Member -InputObject $Credential -MemberType NoteProperty -Name Target -Value "$CredentialPrefix$Target" -Force
+
+                [BetterCredentials.Store]::Save($Credential)
+            }
         }
 
         return $Credential
