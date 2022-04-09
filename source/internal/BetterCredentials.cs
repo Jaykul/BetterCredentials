@@ -97,7 +97,7 @@ namespace BetterCredentials
 
         public static T ElementAt<T>(this IntPtr ptr, int index)
         {
-            var offset = Marshal.SizeOf(typeof(T))*index;
+            var offset = Marshal.SizeOf(typeof(T)) * index;
             var offsetPtr = ptr.Increment(offset);
             return (T)Marshal.PtrToStructure(offsetPtr, typeof(T));
         }
@@ -134,7 +134,7 @@ namespace BetterCredentials
             {
                 // only throw the exception when it's not just a failure to find the credential
                 int error = Marshal.GetLastWin32Error();
-                if (error != (int) NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND)
+                if (error != (int)NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND)
                 {
                     throw new Win32Exception(error);
                 }
@@ -147,12 +147,41 @@ namespace BetterCredentials
             var cred = credential.BaseObject as PSCredential;
             if (cred == null)
             {
-                throw new ArgumentException("Credential object does not contain a PSCredential", "credential");
+                throw new InvalidOperationException("Secret is not of type PSCredential");
+            }
+
+            if (cred.Password.Length > 1280)
+            {
+                // Because it's stored as UTF-16 bytes with a max of 5 * 512 bytes
+                throw new InvalidOperationException("Secret cannot be more than 1280 characters (was " + cred.Password.Length + ")");
+            }
+
+            if (credential.Members["Type"] == null || CredentialType.Generic != ((CredentialType)credential.Members["Type"].Value))
+            {
+                if (credential.Members["Target"].Value.ToString().Length > 337)
+                {
+                    throw new InvalidOperationException("Target name is too long (max 337 characters)");
+                }
+            }
+            else
+            {
+                if (credential.Members["Target"].Value.ToString().Length > 32767)
+                {
+                    throw new InvalidOperationException("Target name is too long (max 32767 characters)");
+                }
             }
 
             if (!NativeMethods.CredWrite(credential, 0))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                int error = Marshal.GetLastWin32Error();
+                if (error != (int)NativeMethods.CREDErrorCodes.NO_ERROR)
+                {
+                    throw new Win32Exception(error);
+                }
+                else
+                {
+                    throw new Exception("Credential not saved");
+                }
             }
         }
 
@@ -172,7 +201,7 @@ namespace BetterCredentials
             {
                 // only throw the exception when it's not just a failure to find the credential
                 int error = Marshal.GetLastWin32Error();
-                if (error != (int) NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND )
+                if (error != (int)NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND)
                 {
                     throw new Win32Exception(error);
                 }
@@ -180,7 +209,6 @@ namespace BetterCredentials
 
             return cred;
         }
-
 
         public static PSObject Load(string target, CredentialType type = CredentialType.Generic)
         {
@@ -190,7 +218,7 @@ namespace BetterCredentials
             {
                 // only throw the exception when it's not just a failure to find the credential
                 int error = Marshal.GetLastWin32Error();
-                if ( error != (int) NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND )
+                if (error != (int)NativeMethods.CREDErrorCodes.ERROR_NOT_FOUND)
                 {
                     throw new Win32Exception(error);
                 }
@@ -279,19 +307,23 @@ namespace BetterCredentials
                 if (!string.IsNullOrEmpty(Target))
                 {
                     // System.Console.WriteLine($"Loading Target: {Target}");
-                    try {
-                        cred = BetterCredentials.Store.Load(Target, CredentialType.Generic, false).BaseObject as PSCredential;
+                    try
+                    {
+                        cred = BetterCredentials.Store.Load(Target, CredentialType.Generic).BaseObject as PSCredential;
                         shouldPrompt = false;
-                    } catch {}
+                    }
+                    catch { }
 
                 }
                 else if (!string.IsNullOrEmpty(userName))
                 {
                     // System.Console.WriteLine($"Loading UserName: {userName}");
-                    try {
+                    try
+                    {
                         cred = BetterCredentials.Store.Load(userName).BaseObject as PSCredential;
                         shouldPrompt = false;
-                    } catch {}
+                    }
+                    catch { }
                 }
             }
 
@@ -317,11 +349,13 @@ namespace BetterCredentials
                 // System.Console.WriteLine($"Saving {cred.UserName}");
                 var storeCred = new PSObject(cred);
 
-                if (!string.IsNullOrEmpty(Target)) {
+                if (!string.IsNullOrEmpty(Target))
+                {
                     // System.Console.WriteLine($"Setting Target: {Target}");
                     storeCred.Properties.Add(new PSNoteProperty("Target", Target));
                 }
-                if (!string.IsNullOrEmpty(Description)) {
+                if (!string.IsNullOrEmpty(Description))
+                {
                     storeCred.Properties.Add(new PSNoteProperty("Description", Description));
                 }
 
@@ -358,9 +392,9 @@ namespace BetterCredentials
             out PSObject credentialout);
 
         [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool CredWrite([In]
+        public static extern bool CredWrite(
             [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(PSCredentialMarshaler))]
-            PSObject userCredential, [In] UInt32 flags);
+            [In] PSObject userCredential, [In] UInt32 flags);
 
         [DllImport("advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool CredDelete(string target, CredentialType type, int flags);
@@ -436,16 +470,16 @@ namespace BetterCredentials
                     Console.WriteLine("Error: Can't convert!");
                     return IntPtr.Zero;
                 }
+                IntPtr unmanagedCredBlob = Marshal.SecureStringToCoTaskMemUnicode(credential.Password);
                 var nCred = new NATIVECREDENTIAL()
-                    {
-                        UserName = credential.UserName,
-                        CredentialBlob = Marshal.SecureStringToCoTaskMemUnicode(credential.Password),
-                        CredentialBlobSize = (uint)credential.Password.Length * 2,
-                        TargetName = "MicrosoftPowerShell:user=" + credential.UserName,
-                        Type = CredentialType.Generic,
-                        Persist = PersistanceType.Enterprise
-                    };
-
+                {
+                    UserName = credential.UserName,
+                    CredentialBlob = unmanagedCredBlob,
+                    CredentialBlobSize = (uint)credential.Password.Length * 2,
+                    TargetName = "BetterCredentials:" + credential.UserName,
+                    Type = CredentialType.Generic,
+                    Persist = PersistanceType.Enterprise
+                };
                 if (credo != null)
                 {
                     foreach (var m in credo.Members)
@@ -482,6 +516,7 @@ namespace BetterCredentials
                 // System.Console.WriteLine($"Marshalling Target '{nCred.TargetName}' UserName: '{nCred.UserName}'");
                 IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(nCred));
                 Marshal.StructureToPtr(nCred, ptr, false);
+                Marshal.ZeroFreeCoTaskMemUnicode(unmanagedCredBlob);
                 return ptr;
             }
 
@@ -495,7 +530,7 @@ namespace BetterCredentials
                 var ncred = (NATIVECREDENTIAL)Marshal.PtrToStructure(pNativeData, typeof(NATIVECREDENTIAL));
 
                 var securePass = (ncred.CredentialBlob == IntPtr.Zero) ? new SecureString()
-                                : SecureStringHelper.CreateSecureString(ncred.CredentialBlob, (int)(ncred.CredentialBlobSize)/2);
+                                : SecureStringHelper.CreateSecureString(ncred.CredentialBlob, (int)(ncred.CredentialBlobSize) / 2);
 
                 var credEx = new PSObject(new PSCredential(ncred.UserName ?? "-", securePass));
 
