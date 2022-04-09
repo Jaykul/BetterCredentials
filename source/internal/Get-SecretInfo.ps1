@@ -7,7 +7,7 @@ function Get-SecretInfo {
     #>
     [CmdletBinding()]
     param (
-        [string]$Filter,
+        [string]$Filter = "*",
         [string]$VaultName,
         [hashtable]$AdditionalParameters
     )

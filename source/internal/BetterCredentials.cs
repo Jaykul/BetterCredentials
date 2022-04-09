@@ -426,7 +426,7 @@ namespace BetterCredentials
                 public FILETIME LastWritten;
                 public UInt32 CredentialBlobSize;
                 public IntPtr CredentialBlob;
-                public PersistanceType Persist = PersistanceType.Enterprise;
+                public PersistanceType Persist = PersistanceType.LocalComputer;
                 public UInt32 AttributeCount;
                 public IntPtr Attributes;
                 public string TargetAlias;
@@ -516,7 +516,7 @@ namespace BetterCredentials
                 // System.Console.WriteLine($"Marshalling Target '{nCred.TargetName}' UserName: '{nCred.UserName}'");
                 IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(nCred));
                 Marshal.StructureToPtr(nCred, ptr, false);
-                Marshal.ZeroFreeCoTaskMemUnicode(unmanagedCredBlob);
+                // Marshal.ZeroFreeCoTaskMemUnicode(unmanagedCredBlob);
                 return ptr;
             }
 

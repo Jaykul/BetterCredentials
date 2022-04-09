@@ -133,7 +133,7 @@ function Get-Credential {
         Write-Verbose "UserName: $(if($Credential){$Credential.UserName}else{$UserName})"
         if ($Password) {
             if ($Password -isnot [System.Security.SecureString]) {
-                $Password = EncodeSecureString $Password
+                $Password = [BetterCredentials.SecureStringHelper]::CreateSecureString($Password)
             }
             Write-Verbose "Creating credential from inline Password"
 

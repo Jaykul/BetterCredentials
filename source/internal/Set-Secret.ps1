@@ -37,15 +37,32 @@ function Set-Secret {
             $CredVaultData['Description'] = "PSCredential"
         }
         "hashtable" {
-            [PSCredential]::new("--Hashtable--", (ConvertTo-SecureString ($Secret | ConvertTo-Json -Compress -Depth 99) -AsPlainText -Force))
+            $Serialized = $Secret | ConvertTo-Json -Compress -Depth 99
+            $Encrypted = ConvertTo-SecureString $Serialized -AsPlainText -Force
+            if ($Encrypted.Length -gt 1280) {
+                throw ([InvalidOperationException]"Secret cannot be more than 1280 characters (was " + $Encrypted.Length + ")")
+            }
+            # Make sure round-trip will actually work
+            if (Get-Command ConvertFrom-Json -ParameterName AsHashtable -ErrorAction Ignore) {
+                $Deserialized = $Serialized | ConvertFrom-Json -AsHashtable
+            } else {
+                Write-Warning "Hashtable secrets are not supported on this version of PowerShell"
+                $Deserialized = $Serialized | ConvertFrom-Json
+            }
+            $RoundTrip = $Deserialized | ConvertTo-Json -Compress -Depth 99
+            if ($RoundTrip -ne $Serialized) {
+                throw ([InvalidOperationException]"Hashtables with complex objects are not supported.")
+            }
+
+            [PSCredential]::new("--Hashtable--", (ConvertTo-SecureString $Serialized -AsPlainText -Force))
             $CredVaultData['Description'] = "Hashtable"
         }
-        default: {
+        default {
             [PSCredential]::new("--unknown--", (ConvertTo-SecureString ($Secret | ConvertTo-Json -Compress -Depth 99) -AsPlainText -Force))
             $CredVaultData['Description'] = "Unknown"
         }
     }
 
-    $Credential | Add-Member -NotePropertyMembers $CredVaultData
+    $Credential | Add-Member -NotePropertyMembers $CredVaultData -Force
     [BetterCredentials.Store]::Save($Credential)
 }

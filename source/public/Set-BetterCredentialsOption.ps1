@@ -11,7 +11,7 @@ function Set-BetterCredentialsOption {
             register a compatible SecretVault, and then force BetterCredentials to use it:
 
                 Register-SecretVault BetterCredentials -ModuleName BetterCredentials -VaultParameters @{ Prefix = "WindowsPowerShell:user=" }
-                Set-BetterCredentialsOption -SecretVaultName BetterCredentials
+                Set-BetterCredentialsOption -VaultName BetterCredentials
 
             If you want to make sure BetterCredentials only loads credentials stored by it, you can set it's CredentialPrefix.
             This means you can have BetterCredentials use _any_ SecretManagement vault, but only auto-load credentials that have the CredentialPrefix in front of the Target.
@@ -23,27 +23,28 @@ function Set-BetterCredentialsOption {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute(<#Rule#>'PSAvoidUsingPlainTextForPassword',<#Parameter#>'CredentialPrefix', Justification = 'Not a credential parameter')]
     [CmdletBinding()]
     param(
-        # Windows Only: if set, BetterCredentials will skip using SecretManagement.
-        # On Linux, this is ignored.
-        [switch]$SkipSecretManagement,
-
         # The name of the SecretVault to store credentials in.
         # By default, all secret vaults will be searched, and secrets will be stored in your default secret vault.
         # If you specify a name here, BetterCredentials will use that vault for saving, and will only search that vault.
-        [string]$SecretVaultName,
+        [Alias("Name")]
+        [string]$VaultName,
 
         # A prefix to prepend to all secret names.
         # If you're storing credentials in a secret vault, you can use this to create a sort-of namespace for your credentials.
         # For compatibility with BetterCredentials 4.5 you could set this to "WindowsPowerShell:user="
         [AllowEmptyString()]
-        [string]$CredentialPrefix
+        [string]$CredentialPrefix,
+
+        # Windows Only: if set, BetterCredentials will skip using SecretManagement.
+        # On Linux, this is ignored.
+        [switch]$SkipSecretManagement
     )
     if ($PSBoundParameters.ContainsKey("SkipSecretManagement")) {
         $Script:SkipSecretManagement = [bool]$SkipSecretManagement
     }
     if ($PSBoundParameters.ContainsKey("SecretVaultName")) {
         $Script:SecretManagementParameter = @{
-            Vault = $SecretVaultName
+            Vault = $VaultName
         }
     }
     if ($PSBoundParameters.ContainsKey("CredentialPrefix")) {

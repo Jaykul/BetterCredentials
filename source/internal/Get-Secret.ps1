@@ -15,20 +15,25 @@ function Get-Secret {
         "string" {
             $Credential.Password
         }
-        "byte[]" {
+        "ByteArray" {
             [Convert]::FromBase64String($Credential.GetNetworkCredential().Password)
         }
         "SecureString" {
             $Credential.Password
         }
         "Hashtable" {
-            $Credential.GetNetworkCredential().Password | ConvertFrom-Json
+            if (Get-Command ConvertFrom-Json -ParameterName AsHashtable -ErrorAction Ignore) {
+                $Credential.GetNetworkCredential().Password | ConvertFrom-Json -AsHashtable
+            } else {
+                Write-Warning "Hashtable secrets are not supported on this version of PowerShell"
+                $Credential.GetNetworkCredential().Password | ConvertFrom-Json
+            }
         }
         "Unknown" {
             $Credential.GetNetworkCredential().Password | ConvertFrom-Json
         }
         # PSCredential and credentials that we didn't put in there ...
-        default: {
+        default {
             $Credential
         }
     }

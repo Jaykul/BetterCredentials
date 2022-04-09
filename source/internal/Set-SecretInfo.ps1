@@ -10,6 +10,8 @@ function Set-SecretInfo {
 
     $Name = $AdditionalParameters["Prefix"] + $Name
 
+    # TODO: Use CRED_PRESERVE_CREDENTIAL_BLOB instead of loading the secret
+    # https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credwritew
     $Credential = [BetterCredentials.Store]::Load($Name, "Generic")
 
     $Type, $Description = $_.Description -Split " ", 2
