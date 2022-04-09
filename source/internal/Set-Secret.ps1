@@ -6,11 +6,10 @@ function Set-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Prefix = "$($AdditionalParameters["Prefix"])"
 
     $CredVaultData = @{
         Type        = [BetterCredentials.CredentialType]::Generic
-        Target      = "$Prefix$Name"
+        Target      = "$($AdditionalParameters.Prefix)$Name"
         TargetAlias = $Name
         Persistance = [BetterCredentials.PersistanceType]::LocalComputer
     }
@@ -50,6 +49,7 @@ function Set-Secret {
                 $Deserialized = $Serialized | ConvertFrom-Json
             }
             $RoundTrip = $Deserialized | ConvertTo-Json -Compress -Depth 99
+            # BUG: This isn't valid, because hashtable order isn't necessarily preserved
             if ($RoundTrip -ne $Serialized) {
                 throw ([InvalidOperationException]"Hashtables with complex objects are not supported.")
             }

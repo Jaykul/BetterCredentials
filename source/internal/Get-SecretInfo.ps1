@@ -11,7 +11,7 @@ function Get-SecretInfo {
         [string]$VaultName,
         [hashtable]$AdditionalParameters
     )
-    $Prefix = "$($AdditionalParameters["Prefix"])"
+    $Prefix = "$($AdditionalParameters.Prefix)"
     $Filter = "$Prefix$Filter"
 
     [BetterCredentials.Store]::Find($Filter).ForEach({

@@ -5,7 +5,8 @@ function Get-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Name = $AdditionalParameters["Prefix"] + $Name
+    $Prefix = "$($AdditionalParameters.Prefix)"
+    $Name = "$Prefix$Name"
 
     $Credential = [BetterCredentials.Store]::Load($Name, "Generic")
 
