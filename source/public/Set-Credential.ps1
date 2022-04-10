@@ -61,10 +61,10 @@ function Set-Credential {
         # TODO: Do we need to skip this is $Type -ne "Generic" ?
         if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
 
-            Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @SecretManagementParameter
+            Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @BetterCredentialsSecretManagementParameters
 
             if ($Metadata) {
-                Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @SecretManagementParameter
+                Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @BetterCredentialsSecretManagementParameters
             }
         } else {
             # Weird validation rules:

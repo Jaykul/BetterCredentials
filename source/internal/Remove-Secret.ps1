@@ -5,7 +5,7 @@ function Remove-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Target = "BetterCredentials", $VaultName, $Name -join "|"
+    $Target = FixTarget @PSBoundParameters
     [BetterCredentials.Store]::Delete($Target, "Generic")
 
     # We've chosen to support hashtables by recursively storing their values

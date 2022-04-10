@@ -6,7 +6,7 @@ function Set-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Target = "BetterCredentials", $VaultName, $Name -join "|"
+    $Target = FixTarget @PSBoundParameters
 
     $CredVaultData = @{
         Type        = [BetterCredentials.CredentialType]::Generic
@@ -21,11 +21,11 @@ function Set-Secret {
 
     $Credential = switch ($Secret.GetType().Name) {
         "string" {
-            [PSCredential]::new("--String--", (ConvertTo-SecureString $Secret -AsPlainText -Force))
+            [PSCredential]::new("--String--", ([BetterCredentials.SecureStringHelper]::CreateSecureString($Secret)))
             $CredVaultData['Description'] = "String"
         }
         "byte[]" {
-            [PSCredential]::new("--ByteArray--", (ConvertTo-SecureString ([Convert]::ToBase64String($Secret)) -AsPlainText -Force))
+            [PSCredential]::new("--ByteArray--", ([BetterCredentials.SecureStringHelper]::CreateSecureString(([Convert]::ToBase64String($Secret)))))
             $CredVaultData['Description'] = "ByteArray"
         }
         "SecureString" {
@@ -44,7 +44,7 @@ function Set-Secret {
                     $Credential = Set-Secret "$Name|$key" $Secret[$key] "HT_$VaultName" $NestedAdditionalParameters
                 }
                 # And then store a list of keys for the hashtable
-                [PSCredential]::new("--Hashtable--", (ConvertTo-SecureString ($Secret.Keys -join "|") -AsPlainText -Force))
+                [PSCredential]::new("--Hashtable--", ([BetterCredentials.SecureStringHelper]::CreateSecureString(($Secret.Keys -join "|"))))
             } catch {
                 # if we fail to store any of the values, we should clean up by removing the whole thing
                 Remove-Secret $Name $Secret $VaultName $AdditionalParameters

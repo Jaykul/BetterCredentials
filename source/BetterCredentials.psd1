@@ -31,7 +31,7 @@ TypesToProcess = @()
 FormatsToProcess = @()
 NestedModules = @(".\BetterCredentials.Extension")
 CmdletsToExport = @()
-VariablesToExport = @()
+VariablesToExport = @('BetterCredentialsSecretManagementParameters')
 DscResourcesToExport = @()
 
 # Functions to export from this module

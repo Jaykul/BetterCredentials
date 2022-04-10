@@ -111,7 +111,7 @@ function Get-Credential {
             # Note: this means we're using the _default_ SecretVault?
             if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-Secret -ErrorAction SilentlyContinue)) {
                 try {
-                    $Credential = Microsoft.PowerShell.SecretManagement\Get-Secret "$CredentialPrefix$Target" @SecretManagementParameter
+                    $Credential = Microsoft.PowerShell.SecretManagement\Get-Secret "$CredentialPrefix$Target" @BetterCredentialsSecretManagementParameters
                 } catch {}
             } else {
                 try {
@@ -223,10 +223,10 @@ function Get-Credential {
                 $Metadata["Description"] = $Description
             }
             if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
-                Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @SecretManagementParameter
+                Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @BetterCredentialsSecretManagementParameters
 
                 if ($Metadata) {
-                    Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @SecretManagementParameter
+                    Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @BetterCredentialsSecretManagementParameters
                 }
             } else {
                 Add-Member -InputObject $Credential -MemberType NoteProperty -Name Target -Value "$CredentialPrefix$Target" -Force

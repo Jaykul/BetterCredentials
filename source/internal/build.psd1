@@ -4,5 +4,5 @@
     VersionedOutputDirectory = $false
     CopyDirectories          = "BetterCredentials.cs"
     SourceDirectories        = "."
-    PublicFilter             = "*.ps1"
+    PublicFilter             = "*-*.ps1"
 }

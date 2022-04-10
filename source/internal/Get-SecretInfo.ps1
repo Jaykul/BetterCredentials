@@ -11,7 +11,7 @@ function Get-SecretInfo {
         [string]$VaultName,
         [hashtable]$AdditionalParameters
     )
-    $Target = "BetterCredentials", $VaultName, $Filter -join "|"
+    $Target = FixTarget @PSBoundParameters
 
     [BetterCredentials.Store]::Find($Target).ForEach({
         $Metadata = @{
@@ -27,7 +27,7 @@ function Get-SecretInfo {
         # But credentials entered by others are unlikely to match this format
 
         $Type, $Description = $_.Description -Split " ", 2
-        if (!($Type -as [Microsoft.PowerShell.SecretManagement.SecretType])) {
+        if ($Type -notin "PSCredential", "SecureString", "String", "Hashtable", "ByteArray") {
             $Type = "Unknown"
         } elseif ($Description) {
             # On PowerShell 5.x there's no -AsHashtable, so we'll just use objects..
@@ -39,13 +39,20 @@ function Get-SecretInfo {
         }
 
         # Assumes the Prefix doesn't have a "|" in it
-        $Name = @($_.Target -split "\|", 3)[2]
+        $Name = $_ | FixName @PSBoundParameters
 
-        [Microsoft.PowerShell.SecretManagement.SecretInformation]::new(
+        <# [Microsoft.PowerShell.SecretManagement.SecretInformation]::new(
             $Name,
             $Type,
             $VaultName,
             $Metadata
-        )
+        ) #>
+
+        [PSCustomObject]@{
+            Name = $Name
+            Type = $Type
+            VaultName = $VaultName
+            Metadata = $Metadata
+        }
     })
 }

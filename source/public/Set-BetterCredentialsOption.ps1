@@ -3,22 +3,25 @@ function Set-BetterCredentialsOption {
         .SYNOPSIS
             Since BetterCredentials 5 now supports SecretManagement, we have a few options.
         .DESCRIPTION
-            To avoid using SecretManagement, you can:
+            BetterCredentials options allow you to avoid SecretManagement, be compatible with older versions, or filter the credentials from other vaults.
 
-                Set-BetterCredentialOption -SkipSecretManagement -CredentialPrefix "WindowsPowerShell:user="
+            If you need backward compatibility with older versions of BetterCredentials, register a secret vault with three overrides:
 
-            If you have existing credentials you need to keep from BetterCredentials 4.x, but want to switch to using SecretManagement,
-            register a compatible SecretVault, and then force BetterCredentials to use it:
+            PS C:\> Register-SecretVault -Name CredentialManager -ModuleName BetterCredentials -VaultParameters @{
+                Namespace = "MicrosoftPowerShell"
+                VaultName = "user"
+                Separator  = "="
+            }
 
-                Register-SecretVault BetterCredentials -ModuleName BetterCredentials -VaultParameters @{ Prefix = "WindowsPowerShell:user=" }
-                Set-BetterCredentialsOption -VaultName BetterCredentials
+        .EXAMPLE
+            Set-BetterCredentialsOption -SkipSecretManagement
 
-            If you want to make sure BetterCredentials only loads credentials stored by it, you can set it's CredentialPrefix.
-            This means you can have BetterCredentials use _any_ SecretManagement vault, but only auto-load credentials that have the CredentialPrefix in front of the Target.
-            That is, probably, only those that you have created using BetterCredential's `Get-Credential -Store` or `Set-Credential` or the attribute `[BetterCredentials.Credential(Store)]`
+            Allows you to work only with the Windows Credential Vault, and skip SecretManagement
 
-                Set-BetterCredentialsOption -CredentialPrefix "BetterCredentials:"
+        .EXAMPLE
+            Set-BetterCredentialsOption -VaultName CredentialManager
 
+            Allows you to specify a single specific SecretManagement Vault for BetterCredentials to use.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute(<#Rule#>'PSAvoidUsingPlainTextForPassword',<#Parameter#>'CredentialPrefix', Justification = 'Not a credential parameter')]
     [CmdletBinding()]
@@ -36,14 +39,22 @@ function Set-BetterCredentialsOption {
         [string]$CredentialPrefix,
 
         # Windows Only: if set, BetterCredentials will skip using SecretManagement.
-        # On Linux, this is ignored.
+        # If $IsMacOS or $IsLinux, this is ignored.
         [switch]$SkipSecretManagement
     )
     if ($PSBoundParameters.ContainsKey("SkipSecretManagement")) {
         $Script:SkipSecretManagement = [bool]$SkipSecretManagement
+        if ($Script:SkipSecretManagement -and -not $IsLinux -and -not $IsMacOS) {
+            $ImplementationModule = "BetterCredentials.Extension"
+            Import-Module $PSScriptRoot\BetterCredentials.Extension\BetterCredentials.Extension.psd1
+        } else {
+            $ImplementationModule = "Microsoft.PowerShell.SecretManagement"
+            Import-Module $ImplementationModule
+        }
     }
+
     if ($PSBoundParameters.ContainsKey("SecretVaultName")) {
-        $Script:SecretManagementParameter = @{
+        $Script:BetterCredentialsSecretManagementParameters = @{
             Vault = $VaultName
         }
     }
@@ -52,6 +63,6 @@ function Set-BetterCredentialsOption {
     }
 }
 
-$SkipSecretManagement = @(Get-Module Microsoft.PowerShell.SecretManagement -ListAvailable).Count -gt 0
+$Script:BetterCredentialsSecretManagementParameters = @{}
 $CredentialPrefix = ""
-$SecretManagementParameter = @{}
+Set-BetterCredentialsOption -SkipSecretManagement:(@(Get-Module "Microsoft.PowerShell.SecretManagement" -ListAvailable).Count -gt 0)

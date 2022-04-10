@@ -48,7 +48,7 @@ function Test-Credential {
 
         if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
             try {
-                @(Microsoft.PowerShell.SecretManagement\Get-SecretInfo "$CredentialPrefix$Target" @SecretManagementParameter).Count -gt 0
+                @(Microsoft.PowerShell.SecretManagement\Get-SecretInfo "$CredentialPrefix$Target" @BetterCredentialsSecretManagementParameters).Count -gt 0
             } catch {}
         } else {
             try {

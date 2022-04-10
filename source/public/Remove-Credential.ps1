@@ -15,7 +15,7 @@ function Remove-Credential {
 
     process {
         if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Remove-Secret -ErrorAction SilentlyContinue)) {
-            Microsoft.PowerShell.SecretManagement\Remove-Secret -Name "$CredentialPrefix$Target" @SecretManagementParameter
+            Microsoft.PowerShell.SecretManagement\Remove-Secret -Name "$CredentialPrefix$Target" @BetterCredentialsSecretManagementParameters
         } else {
             [BetterCredentials.Store]::Delete("$CredentialPrefix$Target")
         }

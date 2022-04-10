@@ -29,7 +29,7 @@ function Find-Credential {
 
     if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
         try {
-            Microsoft.PowerShell.SecretManagement\Get-SecretInfo $Filter @SecretManagementParameter |
+            Microsoft.PowerShell.SecretManagement\Get-SecretInfo $Filter @BetterCredentialsSecretManagementParameters |
                 Microsoft.PowerShell.SecretManagement\Get-Secret
         } catch {}
     } else {

@@ -5,7 +5,7 @@ function Get-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Target = "BetterCredentials", $VaultName, $Name -join "|"
+    $Target = FixTarget @PSBoundParameters
 
     $Credential = [BetterCredentials.Store]::Load($Target, "Generic")
 
@@ -15,13 +15,13 @@ function Get-Secret {
         "string" {
             # Nested hashtable sub-vaults return strings directly
             if ($VaultName.StartsWith("HT_")) {
-                $Credential.GetNetworkCredential().Password
+                [BetterCredentials.SecureStringHelper]::CreateString($Credential.Password)
             } else {
                 $Credential.Password
             }
         }
         "ByteArray" {
-            [Convert]::FromBase64String($Credential.GetNetworkCredential().Password)
+            [Convert]::FromBase64String([BetterCredentials.SecureStringHelper]::CreateString($Credential.Password))
         }
         "SecureString" {
             $Credential.Password
@@ -30,7 +30,7 @@ function Get-Secret {
             $Result = @{}
             # We stored Hashtables by recursing...
             $NestedAdditionalParameters = $AdditionalParameters.Clone()
-            $keys = $Credential.GetNetworkCredential().Password.Split("|")
+            $keys = [BetterCredentials.SecureStringHelper]::CreateString($Credential.Password).Split("|")
             foreach ($key in $keys) {
                 $Result[$key] = Get-Secret "$Name|$key" "HT_$VaultName" $NestedAdditionalParameters
             }
