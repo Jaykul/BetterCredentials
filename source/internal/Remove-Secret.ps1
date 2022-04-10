@@ -5,8 +5,12 @@ function Remove-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
-    $Prefix = "$($AdditionalParameters.Prefix)"
-    $Name = "$Prefix$Name"
+    $Target = "BetterCredentials", $VaultName, $Name -join "|"
+    [BetterCredentials.Store]::Delete($Target, "Generic")
 
-    [BetterCredentials.Store]::Delete($Name, "Generic")
+    # We've chosen to support hashtables by recursively storing their values
+    foreach($nestedSecret in Get-SecretInfo -Filter "$Name|*" -VaultName "HT_$VaultName"){
+        $Target = "BetterCredentials", "HT_$VaultName", $nestedSecret.Name -join "|"
+        [BetterCredentials.Store]::Delete($Target, "Generic")
+    }
 }

@@ -6,10 +6,11 @@ function Set-Secret {
         [string] $VaultName,
         [hashtable] $AdditionalParameters
     )
+    $Target = "BetterCredentials", $VaultName, $Name -join "|"
 
     $CredVaultData = @{
         Type        = [BetterCredentials.CredentialType]::Generic
-        Target      = "$($AdditionalParameters.Prefix)$Name"
+        Target      = $Target
         TargetAlias = $Name
         Persistance = [BetterCredentials.PersistanceType]::LocalComputer
     }
@@ -36,30 +37,24 @@ function Set-Secret {
             $CredVaultData['Description'] = "PSCredential"
         }
         "hashtable" {
-            $Serialized = $Secret | ConvertTo-Json -Compress -Depth 99
-            $Encrypted = ConvertTo-SecureString $Serialized -AsPlainText -Force
-            if ($Encrypted.Length -gt 1280) {
-                throw ([InvalidOperationException]"Secret cannot be more than 1280 characters (was " + $Encrypted.Length + ")")
-            }
-            # Make sure round-trip will actually work
-            if (Get-Command ConvertFrom-Json -ParameterName AsHashtable -ErrorAction Ignore) {
-                $Deserialized = $Serialized | ConvertFrom-Json -AsHashtable
-            } else {
-                Write-Warning "Hashtable secrets are not supported on this version of PowerShell"
-                $Deserialized = $Serialized | ConvertFrom-Json
-            }
-            $RoundTrip = $Deserialized | ConvertTo-Json -Compress -Depth 99
-            # BUG: This isn't valid, because hashtable order isn't necessarily preserved
-            if ($RoundTrip -ne $Serialized) {
-                throw ([InvalidOperationException]"Hashtables with complex objects are not supported.")
+            # Assume Hashtables are really Dictionary<String, object> and store them by recursing...
+            $NestedAdditionalParameters = $AdditionalParameters.Clone()
+            try {
+                foreach ($key in $Secret.Keys) {
+                    $Credential = Set-Secret "$Name|$key" $Secret[$key] "HT_$VaultName" $NestedAdditionalParameters
+                }
+                # And then store a list of keys for the hashtable
+                [PSCredential]::new("--Hashtable--", (ConvertTo-SecureString ($Secret.Keys -join "|") -AsPlainText -Force))
+            } catch {
+                # if we fail to store any of the values, we should clean up by removing the whole thing
+                Remove-Secret $Name $Secret $VaultName $AdditionalParameters
+                throw $_
             }
 
-            [PSCredential]::new("--Hashtable--", (ConvertTo-SecureString $Serialized -AsPlainText -Force))
             $CredVaultData['Description'] = "Hashtable"
         }
         default {
-            [PSCredential]::new("--unknown--", (ConvertTo-SecureString ($Secret | ConvertTo-Json -Compress -Depth 99) -AsPlainText -Force))
-            $CredVaultData['Description'] = "Unknown"
+            throw new InvalidOperationException("Invalid type. Types supported: byte[], string, SecureString, PSCredential, hashtable");
         }
     }
 

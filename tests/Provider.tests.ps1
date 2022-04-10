@@ -9,7 +9,7 @@ Describe "Test Microsoft.PowerShell.SecretManagement module" -tags CI {
         Import-Module -Name Microsoft.PowerShell.SecretManagement
         $ModuleName = "BetterCredentials"
         $VaultName = "BetterCredentialsTestVault"
-        Register-SecretVault $VaultName -ModuleName $ModuleName -VaultParameters @{ Prefix = "${VaultName}|" }
+        Register-SecretVault $VaultName -ModuleName $ModuleName -VaultParameters @{ Prefix = "${VaultName}" }
         Set-BetterCredentialsOption $VaultName
         Set-SecretVaultDefault $VaultName
     }
@@ -179,8 +179,10 @@ Describe "Test Microsoft.PowerShell.SecretManagement module" -tags CI {
 
         It "Verifies writing Hashtable type to $ModuleName vault" {
             $ht = @{
-                Blob   = ([byte[]] @(1, 2))
-                Str    = "Hi"
+                Blob         = ([byte[]] @(1, 2))
+                Str          = "Hello"
+                SecureString = (ConvertTo-SecureString $randomSecretA -AsPlainText -Force)
+                Cred         = ([pscredential]::New("UserA", (ConvertTo-SecureString $randomSecretB -AsPlainText -Force)))
             }
             Set-Secret -Name TestVaultHT -Vault $VaultName -Secret $ht -ErrorVariable err
             $err.Count | Should -Be 0
@@ -190,7 +192,10 @@ Describe "Test Microsoft.PowerShell.SecretManagement module" -tags CI {
             $ht = Get-Secret -Name TestVaultHT -Vault $VaultName -AsPlainText -ErrorVariable err
             $err.Count | Should -Be 0
             $ht.Blob.Count | Should -Be 2
-            $ht.Str | Should -BeExactly "Hi"
+            $ht.Str | Should -BeExactly "Hello"
+            [System.Net.NetworkCredential]::new('', $ht.SecureString).Password | Should -BeExactly $randomSecretA
+            $ht.Cred.UserName | Should -BeExactly "UserA"
+            [System.Net.NetworkCredential]::new('', $ht.Cred.Password).Password | Should -BeExactly $randomSecretB
         }
 
         It "Verifies enumerating Hashtable type from $ModuleName vault" {

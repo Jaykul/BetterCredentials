@@ -8,11 +8,11 @@ function Set-SecretInfo {
     )
     Write-Error "Not implemented"
 
-    $Name = $AdditionalParameters.Prefix + $Name
+    $Target = "BetterCredentials", $VaultName, $Name -join "|"
 
-    # TODO: Use CRED_PRESERVE_CREDENTIAL_BLOB instead of loading the secret
+    # TODO: Use CRED_PRESERVE_CREDENTIAL_BLOB instead of loading the secret?
     # https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credwritew
-    $Credential = [BetterCredentials.Store]::Load($Name, "Generic")
+    $Credential = [BetterCredentials.Store]::Load($Target, "Generic")
 
     $Type, $Description = $_.Description -Split " ", 2
     if (!($Type -as [Microsoft.PowerShell.SecretManagement.SecretType])) {

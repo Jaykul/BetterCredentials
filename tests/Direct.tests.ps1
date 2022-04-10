@@ -6,7 +6,7 @@ Describe "BetterCredentials.Extensions" -tags CI {
         $ModuleName = "BetterCredentials.Extension"
         $VaultName = "BetterCredentialsTestVault"
         $PSModulePath = $Env:PSModulePath
-        $Env:PSModulePath = "$(Convert-Path ..)$([IO.Path]::PathSeparator)$PSModulePath"
+        $Env:PSModulePath = "$(Convert-Path $PSScriptRoot\..\..)$([IO.Path]::PathSeparator)$PSModulePath"
         Remove-Module BetterCredentials, $ModuleName -ErrorAction SilentlyContinue
         Import-Module -Name BetterCredentials
         Import-Module -Name Microsoft.PowerShell.SecretManagement
@@ -16,7 +16,7 @@ Describe "BetterCredentials.Extensions" -tags CI {
 
         Get-Command -mo BetterCredentials.Extension -ParameterName VaultName | ForEach-Object {
             $PSDefaultParameterValues[($_.Name + ":VaultName")]            = $VaultName
-            $PSDefaultParameterValues[($_.Name + ":AdditionalParameters")] = @{ Prefix = "${VaultName}|" }
+            $PSDefaultParameterValues[($_.Name + ":AdditionalParameters")] = @{ Prefix = "${VaultName}" }
         }
         # Register-SecretVault $VaultName -ModuleName $ModuleName -VaultParameters @{ Prefix = "${VaultName}|" }
         # Set-BetterCredentialsOption $VaultName
@@ -164,8 +164,10 @@ Describe "BetterCredentials.Extensions" -tags CI {
 
         It "Verifies writing Hashtable type to $ModuleName vault" {
             $ht = @{
-                Blob   = ([byte[]] @(1, 2))
-                Str    = "Hi"
+                Blob         = ([byte[]] @(1, 2))
+                Str          = "Hello"
+                SecureString = (ConvertTo-SecureString $randomSecretA -AsPlainText -Force)
+                Cred         = ([pscredential]::New("UserA", (ConvertTo-SecureString $randomSecretB -AsPlainText -Force)))
             }
             Set-Secret -Name TestVaultHT -Vault $VaultName -Secret $ht -ErrorVariable err
             $err.Count | Should -Be 0
@@ -175,7 +177,10 @@ Describe "BetterCredentials.Extensions" -tags CI {
             $ht = Get-Secret -Name TestVaultHT -Vault $VaultName -ErrorVariable err
             $err.Count | Should -Be 0
             $ht.Blob.Count | Should -Be 2
-            $ht.Str | Should -BeExactly "Hi"
+            $ht.Str | Should -BeExactly "Hello"
+            [System.Net.NetworkCredential]::new('', $ht.SecureString).Password | Should -BeExactly $randomSecretA
+            $ht.Cred.UserName | Should -BeExactly "UserA"
+            [System.Net.NetworkCredential]::new('', $ht.Cred.Password).Password | Should -BeExactly $randomSecretB
         }
 
         It "Verifies enumerating Hashtable type from $ModuleName vault" {

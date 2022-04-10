@@ -11,10 +11,9 @@ function Get-SecretInfo {
         [string]$VaultName,
         [hashtable]$AdditionalParameters
     )
-    $Prefix = "$($AdditionalParameters.Prefix)"
-    $Filter = "$Prefix$Filter"
+    $Target = "BetterCredentials", $VaultName, $Filter -join "|"
 
-    [BetterCredentials.Store]::Find($Filter).ForEach({
+    [BetterCredentials.Store]::Find($Target).ForEach({
         $Metadata = @{
             Description   = $_.Description
             Type          = $_.Type
@@ -39,12 +38,9 @@ function Get-SecretInfo {
             }
         }
 
-        # If there's a prefix, strip it off the Name
-        $Name = if ($Prefix) {
-            $_.Target -replace "^$([regex]::Escape($Prefix))"
-        } else {
-            $_.Target
-        }
+        # Assumes the Prefix doesn't have a "|" in it
+        $Name = @($_.Target -split "\|", 3)[2]
+
         [Microsoft.PowerShell.SecretManagement.SecretInformation]::new(
             $Name,
             $Type,
