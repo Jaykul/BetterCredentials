@@ -14,9 +14,11 @@ filter FixTarget {
         [object]$Secret
     )
 
+    "FixTarget: $Name, $VaultName, {$($AdditionalParameters.GetEnumerator().ForEach{ $_.Name + ": " + $_.Value } -join ', ')}" >> "$PSScriptRoot\vault.log"
+
     -join @(
-        if ($AdditionalParameters.ContainsKey("ModuleName")) {
-            $AdditionalParameters["ModuleName"]
+        if ($AdditionalParameters.ContainsKey("Namespace")) {
+            $AdditionalParameters["Namespace"]
             ":"
         } else {
             "BetterCredentials"

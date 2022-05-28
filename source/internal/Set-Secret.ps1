@@ -9,14 +9,14 @@ function Set-Secret {
     $Target = FixTarget @PSBoundParameters
 
     $CredVaultData = @{
-        Type        = [BetterCredentials.CredentialType]::Generic
-        Target      = $Target
-        TargetAlias = $Name
-        Persistance = [BetterCredentials.PersistanceType]::LocalComputer
+        Type        = if ($Secret.Type -as [BetterCredentials.CredentialType]) { [BetterCredentials.CredentialType]$Secret.Type } else { [BetterCredentials.CredentialType]::Generic }
+        Target      = if ($Secret.ForceTarget) { $Secret.ForceTarget } else { $Target }
+        TargetAlias = if ($Secret.ForceTarget) { $Target } else { $Name }
+        Persistence = [BetterCredentials.PersistenceType]::LocalComputer
     }
 
-    if ($AdditionalParameters -and $AdditionalParameters.ContainsKey("Persistance")) {
-        $CredVaultData["Persistance"] = $AdditionalParameters["Persistance"]
+    if ($AdditionalParameters -and $AdditionalParameters.ContainsKey("Persistence")) {
+        $CredVaultData["Persistence"] = $AdditionalParameters["Persistence"]
     }
 
     $Credential = switch ($Secret.GetType().Name) {

@@ -13,11 +13,13 @@ function Get-SecretInfo {
     )
     $Target = FixTarget @PSBoundParameters
 
+    "Get-SecretInfo -Filter $Target" >> "$PSScriptRoot\vault.log"
+
     [BetterCredentials.Store]::Find($Target).ForEach({
         $Metadata = @{
             Description   = $_.Description
             Type          = $_.Type
-            Persistance   = $_.Persistance
+            Persistence   = $_.Persistence
             LastWriteTime = $_.LastWriteTime
             Target        = $_.Target
             TargetAlias   = $_.TargetAlias
@@ -25,7 +27,6 @@ function Get-SecretInfo {
 
         # WE shove the Type and Metadata into the Type, space separated
         # But credentials entered by others are unlikely to match this format
-
         $Type, $Description = $_.Description -Split " ", 2
         if ($Type -notin "PSCredential", "SecureString", "String", "Hashtable", "ByteArray") {
             $Type = "Unknown"
@@ -40,19 +41,22 @@ function Get-SecretInfo {
 
         # Assumes the Prefix doesn't have a "|" in it
         $Name = $_ | FixName @PSBoundParameters
+        "                Target: $($_.Target), Description: $($_.Description), Name: $Name, Type: $Type, VaultName: $VaultName" >> "$PSScriptRoot\vault.log"
 
-        <# [Microsoft.PowerShell.SecretManagement.SecretInformation]::new(
-            $Name,
-            $Type,
-            $VaultName,
-            $Metadata
-        ) #>
-
-        [PSCustomObject]@{
-            Name = $Name
-            Type = $Type
-            VaultName = $VaultName
-            Metadata = $Metadata
+        if ("Microsoft.PowerShell.SecretManagement.SecretInformation" -as [Type]) {
+            [Microsoft.PowerShell.SecretManagement.SecretInformation]::new(
+                $Name,
+                $Type,
+                $VaultName,
+                $Metadata
+            )
+        } else {
+            [PSCustomObject]@{
+                Name = $Name
+                Type = $Type
+                VaultName = $VaultName
+                Metadata = $Metadata
+            }
         }
     })
 }

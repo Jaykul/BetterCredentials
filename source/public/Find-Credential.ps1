@@ -25,16 +25,7 @@ function Find-Credential {
         [Alias("Target")]
         [String]$Filter = "*"
     )
-    $Filter = "$CredentialPrefix$Filter"
 
-    if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
-        try {
-            Microsoft.PowerShell.SecretManagement\Get-SecretInfo $Filter @BetterCredentialsSecretManagementParameters |
-                Microsoft.PowerShell.SecretManagement\Get-Secret
-        } catch {}
-    } else {
-        try {
-            [BetterCredentials.Store]::Find($Filter)
-        } catch {}
-    }
+    & $script:ImplementationModule\Get-SecretInfo $Filter @BetterCredentialsSecretManagementParameters |
+        & $script:ImplementationModule\Get-Secret @BetterCredentialsSecretManagementParameters
 }

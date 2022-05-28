@@ -99,7 +99,7 @@ function Connect-RemoteDesktop {
                 $ComputerCmdkey = $Computer
             }
 
-            Set-Credential -Target TERMSRV/$ComputerCmdkey -Credential $Credential -Type DomainPassword
+            Set-Credential -Target TERMSRV/$ComputerCmdkey -ForceTarget -Credential $Credential -Type DomainPassword
 
             $ProcessInfo.FileName = "$($env:SystemRoot)\system32\mstsc.exe"
             $ProcessInfo.Arguments = "$MstscArguments /v $Computer"

@@ -1,26 +1,20 @@
 function Register-BetterCredentialVault {
     <#
         .SYNOPSIS
-            Register a SecretManagement vault using our Credential Manager provider, and set it as the vault for the BetterCredentials commands.
+            Register our SecretManagement vault, and set it as the vault for the BetterCredentials commands.
         .EXAMPLE
-            Register-BetterCredentialVault -Name MyVault -ResourceGroupName MyResourceGroup
+            Register-BetterCredentialVault -Name BCVault
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute(<#Rule#>'PSAvoidUsingPlainTextForPassword',<#Parameter#>'CredentialPrefix', Justification = 'Not a credential parameter')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(<#Rule#>'PSShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(<#Rule#>'PSShouldProcess', '')]
     [CmdletBinding(SupportsShouldProcess)]
     param(
         # The name of the vault to register. Defaults to 'BetterCredentials'.
         [Alias('VaultName')]
-        [switch]$Name = 'BetterCredentials',
+        [string]$Name = 'BetterCredentials',
 
-        # A prefix to prepend to all secret names.
-        #
-        # Because BetterCredentials isn't the only thing putting credentials in the Credential Manager vault,
-        # in order to be able to separate just the credentials created through BetterCredentials, we need a prefix.
-        # The default is "MicrosoftPowerShell:user="
-        # To disable this prefix and see all credentials through this vault, set this parameter to an empty string.
-        [AllowEmptyString()]
-        [string]$CredentialPrefix = "MicrosoftPowerShell:user=",
+        # If set, the vault will be created to store credentials in the same way as BetterCredentials 4.x
+        [switch]$BackwardCompatible,
 
         # A description that is included in the vault registry information.
         [string]$Description,
@@ -34,9 +28,26 @@ function Register-BetterCredentialVault {
         # Pass through the SecretVaultInfo object if it's successfully registered.
         [switch]$PassThru
     )
+    $PSBoundParameters['Name'] = $Name
 
     $null = $PSBoundParameters.Remove("CredentialPrefix")
 
-    Register-SecretVault -ModuleName BetterCredentials -VaultParameters @{ Prefix = $CredentialPrefix } @PSBoundParameters
-    $Script:SecretVaultName = $Name
+    if ($BackwardCompatible) {
+        $null = $PSBoundParameters.Remove("BackwardCompatible")
+        $null = $PSBoundParameters.Add("VaultParameters", @{
+            Namespace = "MicrosoftPowerShell"
+            VaultName = "user"
+            Separator = "="
+        })
+    }
+
+    if ($Script:BetterCredentialsSecretManagementParameters.ContainsKey("AdditionalParameters")) {
+        $PSBoundParameters["VaultParameters"].GetEnumerator().ForEach({
+            $Script:BetterCredentialsSecretManagementParameters["AdditionalParameters"][$_.Key] = $_.Value
+        })
+    } else {
+        Register-SecretVault -ModuleName BetterCredentials @PSBoundParameters
+        $Script:BetterCredentialsSecretManagementParameters["Vault"] = $Name
+    }
+
 }

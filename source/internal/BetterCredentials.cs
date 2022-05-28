@@ -27,7 +27,7 @@ namespace BetterCredentials
         MaximumEx = 1007
     }
 
-    public enum PersistanceType : uint
+    public enum PersistenceType : uint
     {
         Session = 1,
         LocalComputer = 2,
@@ -426,7 +426,7 @@ namespace BetterCredentials
                 public FILETIME LastWritten;
                 public UInt32 CredentialBlobSize;
                 public IntPtr CredentialBlob;
-                public PersistanceType Persist = PersistanceType.LocalComputer;
+                public PersistenceType Persist = PersistenceType.LocalComputer;
                 public UInt32 AttributeCount;
                 public IntPtr Attributes;
                 public string TargetAlias;
@@ -478,7 +478,7 @@ namespace BetterCredentials
                     CredentialBlobSize = (uint)credential.Password.Length * 2,
                     TargetName = "BetterCredentials:" + credential.UserName,
                     Type = CredentialType.Generic,
-                    Persist = PersistanceType.Enterprise
+                    Persist = PersistenceType.Enterprise
                 };
                 if (credo != null)
                 {
@@ -498,9 +498,9 @@ namespace BetterCredentials
                                 if (m.Value != null)
                                     nCred.Type = (CredentialType)m.Value;
                                 break;
-                            case "Persistance":
+                            case "Persistence":
                                 if (m.Value != null)
-                                    nCred.Persist = (PersistanceType)m.Value;
+                                    nCred.Persist = (PersistenceType)m.Value;
                                 break;
                             case "Description":
                                 if (m.Value != null)
@@ -537,7 +537,7 @@ namespace BetterCredentials
                 credEx.Members.Add(new PSNoteProperty("Target", ncred.TargetName));
                 credEx.Members.Add(new PSNoteProperty("TargetAlias", ncred.TargetAlias));
                 credEx.Members.Add(new PSNoteProperty("Type", (CredentialType)ncred.Type));
-                credEx.Members.Add(new PSNoteProperty("Persistance", (PersistanceType)ncred.Persist));
+                credEx.Members.Add(new PSNoteProperty("Persistence", (PersistenceType)ncred.Persist));
                 credEx.Members.Add(new PSNoteProperty("Description", ncred.Comment));
                 credEx.Members.Add(new PSNoteProperty("LastWriteTime", DateTime.FromFileTime((((long)ncred.LastWritten.dwHighDateTime) << 32) + ncred.LastWritten.dwLowDateTime)));
 

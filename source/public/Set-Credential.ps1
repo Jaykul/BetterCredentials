@@ -34,14 +34,22 @@ function Set-Credential {
 
         # Where to store the credential ("Session", "LocalComputer", "Enterprise")
         # NOTE: Only applies when bypassing SecretManagement
-        [BetterCredentials.PersistanceType]$Persistence = "LocalComputer",
+        [BetterCredentials.PersistenceType]$Persistence = "LocalComputer",
 
         # Some text to describe or further identify the credentials
         [Alias("Message")]
-        [string]$Description
+        [string]$Description,
+
+        # If set, the value of $Target will be passed to the CredWrite API without any modification
+        # Depending on the configuration of your Secret Vault, this may make the credential invisible to the Vault
+        [switch]$ForceTarget
     )
     process {
         $Metadata = @{}
+
+        if ($ForceTarget) {
+            $Credential | Add-Member NoteProperty ForceTarget $Target -Force
+        }
         # If the user passed the value, or if it's not set
         if ($PSBoundParameters.ContainsKey("Type") -or !$Credential.Type) {
             $Credential | Add-Member NoteProperty Type $Type -Force
@@ -49,7 +57,7 @@ function Set-Credential {
         }
 
         if ($PSBoundParameters.ContainsKey("Persistence") -or !$Credential.Persistence) {
-            $Credential | Add-Member NoteProperty Persistence $Persistence
+            $Credential | Add-Member NoteProperty Persistence $Persistence -Force
             $Metadata["Persistence"] = $Persistence
         }
 
@@ -58,34 +66,14 @@ function Set-Credential {
             $Metadata["Description"] = $Description
         }
 
-        # TODO: Do we need to skip this is $Type -ne "Generic" ?
-        if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
+        if (!$Target -and $Credential.UserName) {
+            $Target = "$(if ($Credential.Domain) {"$($Credential.Domain)\" })$($Credential.UserName)"
+        }
 
-            Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @BetterCredentialsSecretManagementParameters
+        & $script:ImplementationModule\Set-Secret -Name $Target -Secret $Credential @BetterCredentialsSecretManagementParameters
 
-            if ($Metadata) {
-                Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @BetterCredentialsSecretManagementParameters
-            }
-        } else {
-            # Weird validation rules:
-            if ($Type -eq "DomainPassword") {
-                if ($Target.Length -gt 337) {
-                    throw "Target name must be less than 337 characters long for domain credentials"
-                }
-            }
-
-            if ($Credential.Password.Length -gt 256) {
-                # Because it's stored as UTF-16 bytes with a max of 512
-                throw "Credential Password cannot be more than 256 characters"
-            }
-
-            if ($Target) {
-                $Credential | Add-Member NoteProperty Target "$CredentialPrefix$Target" -Force
-            } else {
-                $Credential | Add-Member NoteProperty Target "$CredentialPrefix$($Credential.UserName)" -Force
-            }
-
-            [BetterCredentials.Store]::Save($Credential)
+        if ($Metadata) {
+            & $script:ImplementationModule\Set-SecretInfo -Name $Target -Metadata $Metadata @BetterCredentialsSecretManagementParameters
         }
     }
 }

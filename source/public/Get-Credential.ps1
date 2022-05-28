@@ -105,29 +105,9 @@ function Get-Credential {
             if (!$PSBoundParameters.ContainsKey("Target")) {
                 $Target = "$(if ($Domain) {"${Domain}\" })${UserName}"
             }
-
             # For cross-platform purposes, we now use SecretManagement to store credentials when it's available
             # If SecretManagement is not available, we support the old method via our Extension module
-            # Note: this means we're using the _default_ SecretVault?
-            if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-Secret -ErrorAction SilentlyContinue)) {
-                try {
-                    $Credential = Microsoft.PowerShell.SecretManagement\Get-Secret "$CredentialPrefix$Target" @BetterCredentialsSecretManagementParameters
-                } catch {}
-            } else {
-                try {
-                    $Credential = [BetterCredentials.Store]::Load("$CredentialPrefix$Target", "Generic")
-                } catch {}
-
-                # support loading any type of credentials if they specify a Target
-                if (!$Credential -and $PSBoundParameters.ContainsKey("Target")) {
-                    foreach ($Type in (([BetterCredentials.CredentialType]::None)..([BetterCredentials.CredentialType]::Maximum))) {
-                        try {
-                            $Credential = [BetterCredentials.Store]::Load("$CredentialPrefix$Target", $Type)
-                        } catch {}
-                        if ($Credential) { break }
-                    }
-                }
-            }
+            $Credential = & $script:ImplementationModule\Get-Secret $Target @BetterCredentialsSecretManagementParameters
         }
 
         Write-Verbose "UserName: $(if($Credential){$Credential.UserName}else{$UserName})"
@@ -138,9 +118,9 @@ function Get-Credential {
             Write-Verbose "Creating credential from inline Password"
 
             if ($Domain) {
-                $Cred = New-Object System.Management.Automation.PSCredential ${Domain}\${UserName}, ${Password}
+                $Cred = [System.Management.Automation.PSCredential]::new("${Domain}\${UserName}", ${Password})
             } else {
-                $Cred = New-Object System.Management.Automation.PSCredential ${UserName}, ${Password}
+                $Cred = [System.Management.Automation.PSCredential]::new(${UserName}, ${Password})
             }
             if ($Credential) {
                 $Credential | Get-Member -type NoteProperty | ForEach-Object {
@@ -172,7 +152,7 @@ function Get-Credential {
                     }
                 }
                 Write-Verbose "Generating Credential with Read-Host -AsSecureString"
-                $Credential = New-Object System.Management.Automation.PSCredential $UserName, $(Read-Host "Password for user $UserName" -AsSecureString)
+                $Credential = [System.Management.Automation.PSCredential]::new($UserName, (Read-Host "Password for user $UserName" -AsSecureString))
             } else {
                 if ($GenericCredentials) {
                     $Type = "Generic"
@@ -195,7 +175,7 @@ function Get-Credential {
         # Make sure it's Generic
         if ($GenericCredentials -and $Credential.UserName.Contains("\")) {
             ${UserName} = @($Credential.UserName -Split "\\")[-1]
-            $Cred = New-Object System.Management.Automation.PSCredential ${UserName}, $Credential.Password
+            $Cred = [System.Management.Automation.PSCredential]::new(${UserName}, $Credential.Password)
             if ($Credential) {
                 $Credential | Get-Member -type NoteProperty | ForEach-Object {
                     Add-Member -InputObject $Cred -MemberType NoteProperty -Name $_.Name -Value $Credential.($_.Name) -Force
@@ -205,7 +185,6 @@ function Get-Credential {
         }
 
         if ($Store) {
-
             $Metadata = @{}
             # If the user passed the value, or if it's not set
             if ($PSBoundParameters.ContainsKey("Type") -or !$Credential.Type) {
@@ -222,16 +201,10 @@ function Get-Credential {
                 $Credential | Add-Member NoteProperty Description $Description -Force
                 $Metadata["Description"] = $Description
             }
-            if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Set-Secret -ErrorAction SilentlyContinue)) {
-                Microsoft.PowerShell.SecretManagement\Set-Secret -Name "$CredentialPrefix$Target" -Secret $Credential @BetterCredentialsSecretManagementParameters
+            & $script:ImplementationModule\Set-Secret -Name $Target -Secret $Credential @BetterCredentialsSecretManagementParameters
 
-                if ($Metadata) {
-                    Microsoft.PowerShell.SecretManagement\Set-SecretInfo -Name "$CredentialPrefix$Target" -Metadata $Metadata @BetterCredentialsSecretManagementParameters
-                }
-            } else {
-                Add-Member -InputObject $Credential -MemberType NoteProperty -Name Target -Value "$CredentialPrefix$Target" -Force
-
-                [BetterCredentials.Store]::Save($Credential)
+            if ($Metadata) {
+                & $script:ImplementationModule\Set-SecretInfo -Name $Target -Metadata $Metadata @BetterCredentialsSecretManagementParameters
             }
         }
 

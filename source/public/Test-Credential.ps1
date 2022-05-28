@@ -46,14 +46,6 @@ function Test-Credential {
             $target = $UserName.ToString()
         }
 
-        if (!$SkipSecretManagement -and (Get-Command Microsoft.PowerShell.SecretManagement\Get-SecretInfo -ErrorAction SilentlyContinue)) {
-            try {
-                @(Microsoft.PowerShell.SecretManagement\Get-SecretInfo "$CredentialPrefix$Target" @BetterCredentialsSecretManagementParameters).Count -gt 0
-            } catch {}
-        } else {
-            try {
-                [BetterCredentials.Store]::Find("$CredentialPrefix$Target").Count -gt 0
-            } catch {}
-        }
+        (& $script:ImplementationModule\Get-SecretInfo $Target @BetterCredentialsSecretManagementParameters).Count -gt 0
     }
 }

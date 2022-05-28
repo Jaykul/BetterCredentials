@@ -16,6 +16,8 @@ filter FixName {
         $Name = $InputObject.Target
     }
 
+    "FixName $Name $VaultName {$($AdditionalParameters.GetEnumerator().ForEach{ $_.Name + ": " + $_.Value } -join ', ')}" >> "$PSScriptRoot\vault.log"
+
     $Name -Replace ("^" + [Regex]::Escape(
         -join @(
             if ($AdditionalParameters.ContainsKey("Namespace")) {

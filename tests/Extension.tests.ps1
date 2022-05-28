@@ -19,7 +19,7 @@ Describe "BetterCredentials.Extensions" -tags CI {
             $PSDefaultParameterValues[($_.Name + ":AdditionalParameters")] = @{ Prefix = "${VaultName}" }
         }
         # Register-SecretVault $VaultName -ModuleName $ModuleName -VaultParameters @{ Prefix = "${VaultName}|" }
-        # Set-BetterCredentialsOption $VaultName
+        # Set-BetterCredentialOption $VaultName
         # Set-SecretVaultDefault $VaultName
     }
 

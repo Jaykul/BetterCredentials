@@ -13,3 +13,8 @@ Add-Type -Path $PSScriptRoot\BetterCredentials.cs
 
     In order to cram support for non-credential secrets in, we store the Type as the first word in the description.
 #>
+
+$JsonOptions = @{ Compress = $true; Depth = 99 }
+if (Get-Command ConvertTo-Json -ParameterName EnumsAsStrings -ErrorAction SilentlyContinue) {
+    $JsonOptions["EnumsAsStrings"] = $true
+}

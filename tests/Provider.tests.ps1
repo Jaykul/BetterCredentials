@@ -10,7 +10,7 @@ Describe "Test Microsoft.PowerShell.SecretManagement module" -tags CI {
         $ModuleName = "BetterCredentials"
         $VaultName = "BetterCredentialsTestVault"
         Register-SecretVault $VaultName -ModuleName $ModuleName -VaultParameters @{ Prefix = "${VaultName}" }
-        Set-BetterCredentialsOption $VaultName
+        Set-BetterCredentialOption $VaultName
         Set-SecretVaultDefault $VaultName
     }
 
