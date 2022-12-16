@@ -4,18 +4,15 @@ using namespace System.Management.Automation
 class BetterCredentialAttribute : ArgumentTransformationAttribute {
     [bool]$MandatoryPassword = $false
     [bool]$Save = $false
+    [string]$Target = [NullString]::Value
+    [string]$Domain = [NullString]::Value
     [string]$Title = "PowerShell credential request"
-    [string]$Prompt = "Enter your credentials."
-    [string]$Domain = ""
-
-    [PSCredentialTypes]$AllowedCredentialTypes = "Generic, Domain"
-    [PSCredentialUIOptions]$Options = "Default"
+    [string]$Message = "Enter your credentials."
 
     [object] Transform([EngineIntrinsics]$engineIntrinsics, [object]$inputData) {
         [PSCredential]$Credential = $null
-        [string]$userName = $null;
-        [bool]$shouldPrompt = $false;
-
+        [string]$userName = $null
+        [bool]$shouldPrompt = $false
 
         if (($null -eq $engineIntrinsics) -or ($null -eq $engineIntrinsics.Host) -or ($null -eq $engineIntrinsics.Host.UI)) {
             throw [ArgumentNullException]::new("engineIntrinsics")
@@ -35,21 +32,20 @@ class BetterCredentialAttribute : ArgumentTransformationAttribute {
         }
 
         if ($shouldPrompt) {
-            $Credential = $engineIntrinsics.Host.UI.PromptForCredential(
-                $this.Title,
-                $this.Prompt,
-                $userName,
-                $this.Domain,
-                $this.AllowedCredentialTypes,
-                $this.Options);
+            $Splat = @{
+                Title = $this.Title
+                Description = $this.Message
+                Store = $this.Save
+            }
+            if ($UserName) { $Splat['UserName'] = $userName }
+            if ($this.Domain) { $Splat['Domain'] = $this.Domain }
+            if ($this.Target) { $Splat['Target'] = $this.Target }
+
+            $Credential = BetterCredentials\Get-Credential @Splat
         }
 
         if ($this.MandatoryPassword -and $Credential.Password.Length -eq 0) {
             throw "The password is mandatory"
-        }
-
-        if ($this.Store) {
-            [BetterCredentials.Store]::Save($Credential)
         }
 
         return $Credential;
