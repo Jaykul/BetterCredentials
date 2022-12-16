@@ -36,7 +36,7 @@ function Test-Credential {
     [OutputType("System.Boolean")]
     param(
         [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [Alias("Credential")]
+        [Alias("Credential", "Target")]
         [PSObject]$UserName
     )
     process {
