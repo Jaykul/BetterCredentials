@@ -123,7 +123,7 @@ function Get-Credential {
                 $Cred = [System.Management.Automation.PSCredential]::new(${UserName}, ${Password})
             }
             if ($Credential) {
-                $Credential | Get-Member -type NoteProperty | ForEach-Object {
+                $Credential | Get-Member -Type NoteProperty | ForEach-Object {
                     Add-Member -InputObject $Cred -MemberType NoteProperty -Name $_.Name -Value $Credential.($_.Name) -Force
                 }
             }
@@ -190,11 +190,6 @@ function Get-Credential {
             if ($PSBoundParameters.ContainsKey("Type") -or !$Credential.Type) {
                 $Credential | Add-Member NoteProperty Type $Type -Force
                 $Metadata["Type"] = $Type
-            }
-
-            if ($PSBoundParameters.ContainsKey("Persistence") -or !$Credential.Persistence) {
-                $Credential | Add-Member NoteProperty Persistence $Persistence
-                $Metadata["Persistence"] = $Persistence
             }
 
             if ($PSBoundParameters.ContainsKey("Description")) {

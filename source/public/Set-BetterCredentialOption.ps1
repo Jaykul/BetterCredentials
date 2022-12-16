@@ -10,7 +10,7 @@ function Set-BetterCredentialOption {
             PS C:\> Register-SecretVault -Name CredentialManager -ModuleName BetterCredentials -VaultParameters @{
                 Namespace = "MicrosoftPowerShell"
                 VaultName = "user"
-                Separator  = "="
+                Separator = "="
             }
 
         .EXAMPLE
